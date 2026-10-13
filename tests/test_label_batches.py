@@ -130,6 +130,57 @@ def test_evaluation_only_model_is_not_selected_for_online_traffic(tmp_path: Path
     assert adapter.calls == ["online-model"]
 
 
+def test_configured_real_provider_is_preferred_and_mock_remains_last_fallback(
+    tmp_path: Path, monkeypatch: object
+) -> None:
+    monkeypatch.setenv("REAL_PROVIDER_KEY", "configured")  # type: ignore[attr-defined]
+    database = tmp_path / "product.db"
+    pool = ModelPoolStore(database)
+    pool.create(
+        ModelPoolEntry(
+            model_id="mock-cheap",
+            provider_id="local-mock",
+            base_url="http://127.0.0.1:4000/v1",
+            api_key_env="",
+            api_model="mock-cheap",
+            cost_rank=1,
+            max_tokens=100,
+            route_label="tier_5",
+            tags=("demo", "mock"),
+        )
+    )
+    for model_id, cost_rank in (("real-a", 10), ("real-b", 20)):
+        pool.create(
+            ModelPoolEntry(
+                model_id=model_id,
+                provider_id="real-provider",
+                base_url="https://example.test/v1",
+                api_key_env="REAL_PROVIDER_KEY",
+                api_model=model_id,
+                cost_rank=cost_rank,
+                max_tokens=100,
+                route_label="tier_5",
+                tags=("general",),
+            )
+        )
+    adapter = PoolFakeAdapter(
+        {"mock-cheap", "real-a", "real-b"}, failing_model_ids={"real-a"}
+    )
+    runtime = RouteTuneRuntime(
+        router=LabelRouter(create_cold_start_label_bundle()),
+        adapter=adapter,
+        security=SecurityPipeline(),
+        traces=TraceStore(database),
+        model_pool=pool,
+    )
+
+    response = runtime.complete([ChatMessage(role="user", content="hello")])
+
+    assert response.selected_model_id == "real-a"
+    assert response.actual_model_id == "real-b"
+    assert adapter.calls == ["real-a", "real-b"]
+
+
 def test_route_batch_imports_messages_runs_and_preserves_retry_history(tmp_path: Path) -> None:
     _, manager, adapter, _ = _label_runtime(tmp_path)
     content = "\n".join(

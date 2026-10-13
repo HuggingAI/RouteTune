@@ -21,6 +21,21 @@ def _now() -> str:
     return datetime.now(UTC).isoformat()
 
 
+def _routing_priority(entry: ModelPoolEntry) -> tuple[int, int, str]:
+    """Prefer configured real providers while retaining demo models as a cold-start fallback."""
+    is_demo = "demo" in entry.tags
+    has_credential = not entry.api_key_env or bool(
+        os.environ.get(entry.api_key_env, "").strip()
+    )
+    if has_credential and not is_demo:
+        group = 0
+    elif is_demo:
+        group = 1
+    else:
+        group = 2
+    return group, entry.cost_rank, entry.model_id
+
+
 @dataclass(frozen=True)
 class ModelPoolEntry:
     model_id: str
@@ -344,14 +359,23 @@ class ModelPoolStore:
         *,
         exclude: frozenset[str] = frozenset(),
     ) -> ModelPoolEntry:
+        candidates = self.routing_candidates(route_label, exclude=exclude)
+        if not candidates:
+            raise ValueError(f"no enabled model is assigned to route label: {route_label}")
+        return candidates[0]
+
+    def routing_candidates(
+        self,
+        route_label: str,
+        *,
+        exclude: frozenset[str] = frozenset(),
+    ) -> list[ModelPoolEntry]:
         candidates = [
             self.get_entry(item["model_id"])
             for item in self.list(route_label=route_label, enabled_only=True, online_only=True)
             if item["model_id"] not in exclude
         ]
-        if not candidates:
-            raise ValueError(f"no enabled model is assigned to route label: {route_label}")
-        return min(candidates, key=lambda item: (item.cost_rank, item.model_id))
+        return sorted(candidates, key=_routing_priority)
 
 
 class RegistryAdapter(ModelAdapter):
@@ -572,6 +596,17 @@ class ModelPoolSnapshot:
         *,
         exclude: frozenset[str] = frozenset(),
     ) -> ModelPoolEntry:
+        candidates = self.routing_candidates(route_label, exclude=exclude)
+        if not candidates:
+            raise ValueError(f"no enabled model is assigned to route label: {route_label}")
+        return candidates[0]
+
+    def routing_candidates(
+        self,
+        route_label: str,
+        *,
+        exclude: frozenset[str] = frozenset(),
+    ) -> list[ModelPoolEntry]:
         candidates = [
             entry
             for entry in self._entries.values()
@@ -580,9 +615,7 @@ class ModelPoolSnapshot:
             and entry.route_label == route_label
             and entry.model_id not in exclude
         ]
-        if not candidates:
-            raise ValueError(f"no enabled model is assigned to route label: {route_label}")
-        return min(candidates, key=lambda item: (item.cost_rank, item.model_id))
+        return sorted(candidates, key=_routing_priority)
 
 
 def _validate_entry(entry: ModelPoolEntry) -> None:

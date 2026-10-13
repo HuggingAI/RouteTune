@@ -152,6 +152,7 @@ _PROVIDER_KEY_ENV = {
     "openrouter": "OPENROUTER_API_KEY",
     "siliconflow": "SILICONFLOW_API_KEY",
     "deepseek": "DEEPSEEK_API_KEY",
+    "minimax": "MINIMAX_API_KEY",
 }
 
 
@@ -249,18 +250,42 @@ def create_app(
     def health() -> dict[str, object]:
         serving_runtime = deployments.active_runtime if deployments else runtime
         is_label_router = isinstance(serving_runtime.router, LabelRouter)
+        pool_models = (
+            serving_runtime.model_pool.list(enabled_only=True, online_only=True)
+            if is_label_router and serving_runtime.model_pool is not None
+            else []
+        )
         online_models = (
-            sorted(
-                item["model_id"]
-                for item in (
-                    serving_runtime.model_pool.list(enabled_only=True, online_only=True)
-                    if serving_runtime.model_pool is not None
-                    else []
-                )
-            )
+            sorted(item["model_id"] for item in pool_models)
             if is_label_router
             else sorted(serving_runtime.adapter.model_ids)
         )
+        routing_targets: dict[str, str] = {}
+        if is_label_router and serving_runtime.model_pool is not None:
+            for label in serving_runtime.router.bundle.route_labels:
+                try:
+                    routing_targets[label] = serving_runtime.model_pool.resolve(label).model_id
+                except ValueError:
+                    continue
+        demo_models = sorted(
+            str(item["model_id"]) for item in pool_models if "demo" in item.get("tags", [])
+        )
+        configured_real_models = sorted(
+            str(item["model_id"])
+            for item in pool_models
+            if "demo" not in item.get("tags", [])
+            and (not item.get("api_key_env") or item.get("api_key_available"))
+        )
+        if not is_label_router:
+            provider_mode = "legacy"
+        elif configured_real_models and demo_models:
+            provider_mode = "live_with_demo_fallback"
+        elif configured_real_models:
+            provider_mode = "live"
+        elif demo_models:
+            provider_mode = "demo"
+        else:
+            provider_mode = "unavailable"
         return {
             "status": "ok",
             "bundle_version": serving_runtime.router.bundle.version,
@@ -274,6 +299,10 @@ def create_app(
             ),
             "models": sorted(serving_runtime.adapter.model_ids),
             "online_models": online_models,
+            "routing_targets": routing_targets,
+            "provider_mode": provider_mode,
+            "demo_models": demo_models,
+            "configured_real_models": configured_real_models,
             "deployment_id": deployments.deployment_id if deployments else None,
             "release_id": deployments.active_release_id if deployments else None,
         }
@@ -532,6 +561,14 @@ def create_app(
                 "display_name": "DeepSeek",
                 "base_url": "https://api.deepseek.com",
                 "api_key_env": "DEEPSEEK_API_KEY",
+            },
+            "minimax": {
+                "provider_id": "minimax",
+                "display_name": "MiniMax",
+                "base_url": os.environ.get(
+                    "MINIMAX_BASE_URL", "https://api.minimaxi.com/v1"
+                ),
+                "api_key_env": "MINIMAX_API_KEY",
             },
         }
         for model in model_pool.list():

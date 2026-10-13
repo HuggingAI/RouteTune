@@ -133,7 +133,9 @@ ROUTETUNE_API_KEY=change-me
 
 Docker Compose 会在启动时自动读取根目录 `.env`。从源码运行时可以直接 `export`，也可以传入 `--env-file .env`。模型配置只保存环境变量名，不保存 Key 明文。
 
-重启后，在“模型池”添加模型、选择 Provider 和路由层级，然后执行可用性检测。草稿模型只有在创建并发布新 Release 后才会进入生产统一 API。生产环境建议始终设置 `ROUTETUNE_API_KEY`，并由 HTTPS 反向代理对外提供服务。
+重启后，在“模型池”添加模型、选择 Provider 和路由层级，然后执行可用性检测。可以创建任意多个自定义 OpenAI-compatible Provider，并在多个模型间复用 Provider ID。草稿模型只有在创建并发布新 Release 后才会进入生产统一 API。
+
+当已发布版本同时包含真实模型与 Demo Mock 时，RouteTune 优先选择已配置凭据的真实 Provider，Mock 只作无 Key 冷启动或最后兜底。`GET /health` 会返回 `provider_mode` 和每个层级的 `routing_targets`，便于确认真实流量会去哪里。生产环境建议禁用 Mock、设置 `ROUTETUNE_API_KEY`，并由 HTTPS 反向代理对外提供服务。
 
 更完整的容器配置、备份和升级说明见 [部署指南](docs/DEPLOYMENT.md)。
 

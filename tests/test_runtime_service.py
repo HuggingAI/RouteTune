@@ -177,6 +177,7 @@ def test_admin_console_and_health_are_available(tmp_path: Path) -> None:
     admin = client.get("/admin")
     assert admin.status_code == 200
     assert "RouteTune Console" in admin.text
+    assert "模型池" in admin.text
 
 
 def test_api_key_protects_business_endpoints(tmp_path: Path, monkeypatch: object) -> None:

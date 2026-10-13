@@ -293,11 +293,11 @@ class RouteTuneRuntime:
         start = labels.index(route_label) if route_label in labels else len(labels) - 1
         candidates: list[str] = []
         for label in labels[start:]:
-            entries = self.model_pool.list(route_label=label, enabled_only=True, online_only=True)
+            entries = self.model_pool.routing_candidates(label)
             candidates.extend(
-                item["model_id"]
+                item.model_id
                 for item in entries
-                if item["model_id"] != selected_model_id and item["model_id"] not in candidates
+                if item.model_id != selected_model_id and item.model_id not in candidates
             )
         return candidates
 

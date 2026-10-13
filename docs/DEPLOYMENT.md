@@ -17,7 +17,7 @@ Compose 会启动：
 - `routetune-data`：SQLite 数据；
 - `routetune-artifacts`：冷启动与训练产生的 Router 制品。
 
-首次启动时，容器自动创建 `tier_1`～`tier_5` 冷启动 Bundle。默认配置在回退层 `tier_5` 提供 `mock-strong`，所以不需要外部 Key 也能调用。
+首次启动时，容器自动创建 `tier_1`～`tier_5` 冷启动 Bundle。默认配置在回退层 `tier_5` 提供 `mock-strong`，所以不需要外部 Key 也能调用。发布版本同时包含真实模型与 Demo Mock 时，已配置凭据的真实 Provider 优先，Mock 只作为最后兜底；健康接口的 `provider_mode` 与 `routing_targets` 会显示当前实际首选。
 
 ## Key 配置
 
@@ -36,7 +36,7 @@ ROUTETUNE_API_KEY=change-me
 ## 生产前必须修改
 
 1. 设置足够长的随机 `ROUTETUNE_API_KEY`。
-2. 在管理台加入真实 Provider 和模型，检测可用性并禁用 Mock 模型。
+2. 在管理台加入真实 Provider 和模型，检测可用性并禁用 Mock 模型；自定义 OpenAI-compatible Provider 数量不受限制，以唯一 Provider ID 区分。
 3. 创建候选 Release，确认模型池、安全策略和 Router Bundle 后人工发布。
 4. 使用 Caddy、Nginx 或云负载均衡器终止 HTTPS。
 5. 限制管理台网络访问；当前管理接口和业务接口共用一个 Bearer Token。

@@ -92,6 +92,9 @@ def _versioned_app(tmp_path: Path) -> tuple[TestClient, DeploymentManager, FakeP
 def test_draft_model_changes_only_reach_unified_api_after_publish(tmp_path: Path) -> None:
     client, deployments, provider = _versioned_app(tmp_path)
     initial_release = deployments.active_release_id
+    health = client.get("/health").json()
+    assert health["provider_mode"] == "live"
+    assert health["routing_targets"] == {"tier_5": "cheap"}
 
     first = client.post(
         "/v1/chat/completions",
@@ -126,6 +129,32 @@ def test_draft_model_changes_only_reach_unified_api_after_publish(tmp_path: Path
     assert after_publish["model"] == "strong"
     assert after_publish["routetune"]["release_id"] == candidate["release_id"]
     assert [call[0] for call in provider.calls] == ["cheap", "cheap", "strong"]
+
+
+def test_provider_catalog_supports_multiple_custom_providers(tmp_path: Path) -> None:
+    client, _, _ = _versioned_app(tmp_path)
+    for provider_id in ("internal-east", "internal-west"):
+        response = client.post(
+            "/v1/model-pool",
+            json={
+                "model_id": f"{provider_id}-model",
+                "provider_id": provider_id,
+                "base_url": f"https://{provider_id}.example.test/v1",
+                "api_key_env": f"{provider_id.upper().replace('-', '_')}_API_KEY",
+                "api_model": "internal-model",
+                "cost_rank": 10,
+                "max_tokens": 256,
+                "route_label": "tier_5",
+                "tags": ["internal"],
+                "enabled": True,
+            },
+        )
+        assert response.status_code == 200
+
+    providers = {
+        item["provider_id"] for item in client.get("/v1/providers").json()["data"]
+    }
+    assert {"minimax", "internal-east", "internal-west"}.issubset(providers)
 
 
 def test_model_availability_check_updates_operational_status(tmp_path: Path) -> None:
