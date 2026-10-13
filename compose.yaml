@@ -1,0 +1,36 @@
+services:
+  routetune:
+    build: .
+    image: routetune:local
+    restart: unless-stopped
+    depends_on:
+      mock-provider:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${ROUTETUNE_PORT:-8787}:8787"
+    environment:
+      ROUTETUNE_API_KEY: ${ROUTETUNE_API_KEY:-}
+      ROUTETUNE_MODEL_CHECK_INTERVAL_SECONDS: ${ROUTETUNE_MODEL_CHECK_INTERVAL_SECONDS:-1800}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      SILICONFLOW_API_KEY: ${SILICONFLOW_API_KEY:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      MINIMAX_API_KEY: ${MINIMAX_API_KEY:-}
+      MINIMAX_BASE_URL: ${MINIMAX_BASE_URL:-https://api.minimaxi.com/v1}
+    volumes:
+      - routetune-data:/app/data
+      - routetune-artifacts:/app/artifacts
+
+  mock-provider:
+    build: .
+    image: routetune:local
+    restart: unless-stopped
+    command: ["routetune", "mock-litellm", "--host", "0.0.0.0", "--port", "4000"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:4000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  routetune-data:
+  routetune-artifacts:

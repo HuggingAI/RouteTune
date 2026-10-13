@@ -1,0 +1,678 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="RouteTune 是可私有化部署的 LLM 路由闭环，用真实业务反馈训练概率分类 Router，通过统一 API 把请求交给刚好够用的模型。">
+  <meta name="theme-color" content="#13251b">
+  <title>RouteTune — 用真实反馈训练你的 LLM Router</title>
+  <style>
+    :root {
+      --ink: #122019;
+      --forest: #13251b;
+      --forest-2: #1b3425;
+      --green: #2f8a5d;
+      --green-bright: #58ce88;
+      --lime: #d9ff72;
+      --cream: #f5f5ed;
+      --paper: #fbfcf7;
+      --white: #ffffff;
+      --muted: #657268;
+      --line: rgba(18, 32, 25, .13);
+      --shadow: 0 30px 90px rgba(16, 35, 24, .12);
+      --radius: 26px;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      overflow-x: hidden;
+      color: var(--ink);
+      background: var(--cream);
+      font-family: var(--sans);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; }
+    button, input { font: inherit; }
+    button { color: inherit; }
+    ::selection { color: var(--forest); background: var(--lime); }
+
+    .shell { width: min(1180px, calc(100% - 40px)); margin: 0 auto; }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 18px;
+      color: var(--green);
+      font: 700 12px/1 var(--mono);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .eyebrow::before { content: ""; width: 26px; height: 2px; background: currentColor; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1, h2, h3 { line-height: 1.08; letter-spacing: -.04em; }
+    h2 { margin-bottom: 22px; font-size: clamp(36px, 5vw, 66px); }
+    .lead { max-width: 700px; color: var(--muted); font-size: clamp(17px, 2vw, 21px); }
+    .section { padding: 112px 0; }
+    .section-head { margin-bottom: 54px; }
+    .section-head.split { display: flex; align-items: end; justify-content: space-between; gap: 60px; }
+    .section-head.split .lead { max-width: 500px; margin-bottom: 8px; }
+
+    .topbar {
+      position: fixed;
+      z-index: 20;
+      inset: 0 0 auto;
+      border-bottom: 1px solid transparent;
+      transition: background .25s, border-color .25s, backdrop-filter .25s;
+    }
+    .topbar.scrolled {
+      background: rgba(245, 245, 237, .86);
+      border-color: var(--line);
+      backdrop-filter: blur(16px);
+    }
+    .nav { height: 76px; display: flex; align-items: center; }
+    .logo { display: inline-flex; align-items: center; gap: 11px; text-decoration: none; font-weight: 820; font-size: 19px; }
+    .logo-mark {
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      color: var(--forest);
+      background: var(--lime);
+      border-radius: 10px 10px 10px 3px;
+      font-size: 18px;
+      box-shadow: 0 8px 20px rgba(67, 111, 76, .2);
+    }
+    .nav-links { display: flex; align-items: center; gap: 30px; margin-left: auto; }
+    .nav-links a { color: #47554b; text-decoration: none; font-size: 14px; font-weight: 650; }
+    .nav-links a:hover { color: var(--green); }
+    .nav-cta { padding: 9px 16px; border: 1px solid var(--ink); border-radius: 999px; color: var(--ink) !important; }
+    .menu-button { display: none; margin-left: auto; border: 0; background: none; font-size: 24px; cursor: pointer; }
+
+    .hero {
+      position: relative;
+      min-height: 900px;
+      padding: 168px 0 90px;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: "";
+      position: absolute;
+      width: 760px;
+      height: 760px;
+      top: -300px;
+      right: -190px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(93, 207, 139, .27), rgba(217, 255, 114, .07) 52%, transparent 72%);
+      pointer-events: none;
+    }
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      opacity: .35;
+      pointer-events: none;
+      background-image: linear-gradient(rgba(20, 52, 31, .06) 1px, transparent 1px), linear-gradient(90deg, rgba(20, 52, 31, .06) 1px, transparent 1px);
+      background-size: 64px 64px;
+      mask-image: linear-gradient(to bottom, black, transparent 86%);
+    }
+    .hero-grid { position: relative; z-index: 1; display: grid; grid-template-columns: 1.04fr .96fr; gap: 68px; align-items: center; }
+    .hero h1 { max-width: 720px; margin-bottom: 28px; font-size: clamp(52px, 5.3vw, 72px); }
+    .hero h1 > span { display: block; white-space: nowrap; }
+    .hero h1 em { color: var(--green); font-style: normal; }
+    .hero-copy > p { max-width: 650px; color: #566258; font-size: clamp(18px, 2vw, 22px); }
+    .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; margin: 38px 0 26px; }
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      min-height: 50px;
+      padding: 0 21px;
+      border: 1px solid var(--ink);
+      border-radius: 999px;
+      text-decoration: none;
+      font-weight: 760;
+      cursor: pointer;
+      transition: transform .2s, box-shadow .2s, background .2s;
+    }
+    .button:hover { transform: translateY(-2px); box-shadow: 0 12px 25px rgba(18, 32, 25, .12); }
+    .button.primary { color: var(--white); background: var(--forest); }
+    .button.accent { border-color: var(--lime); color: var(--forest); background: var(--lime); }
+    .button.ghost { background: rgba(255, 255, 255, .5); }
+    .micro-proof { display: flex; flex-wrap: wrap; gap: 10px 22px; color: var(--muted); font-size: 13px; }
+    .micro-proof span::before { content: "✓"; margin-right: 7px; color: var(--green); font-weight: 900; }
+
+    .router-demo {
+      position: relative;
+      padding: 18px;
+      border: 1px solid rgba(255, 255, 255, .14);
+      border-radius: 32px;
+      color: #eff7f0;
+      background: var(--forest);
+      box-shadow: 0 42px 90px rgba(18, 39, 26, .25);
+      transform: rotate(1.2deg);
+    }
+    .router-demo::before {
+      content: "";
+      position: absolute;
+      inset: -12px 24px auto;
+      height: 12px;
+      border-radius: 20px 20px 0 0;
+      background: var(--lime);
+      opacity: .95;
+    }
+    .demo-top { display: flex; align-items: center; justify-content: space-between; padding: 4px 4px 17px; }
+    .demo-top strong { font-size: 14px; }
+    .live { display: inline-flex; align-items: center; gap: 7px; color: #a8b7ab; font: 11px var(--mono); }
+    .live i { width: 7px; height: 7px; border-radius: 50%; background: var(--green-bright); box-shadow: 0 0 0 5px rgba(88, 206, 136, .12); }
+    .demo-query { padding: 18px; border: 1px solid rgba(255, 255, 255, .1); border-radius: 18px; background: rgba(255, 255, 255, .055); }
+    .demo-query small, .demo-result small { display: block; margin-bottom: 9px; color: #8fa194; font: 10px var(--mono); letter-spacing: .12em; }
+    .demo-query p { min-height: 52px; margin: 0; font-size: 16px; }
+    .query-presets { display: flex; gap: 7px; margin: 11px 0 18px; }
+    .query-presets button {
+      flex: 1;
+      padding: 8px 5px;
+      border: 1px solid rgba(255, 255, 255, .1);
+      border-radius: 9px;
+      color: #aebdb2;
+      background: transparent;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .query-presets button.active { color: var(--forest); border-color: var(--lime); background: var(--lime); }
+    .probability-list { display: grid; gap: 9px; }
+    .prob-row { display: grid; grid-template-columns: 50px 1fr 40px; gap: 8px; align-items: center; font: 11px var(--mono); color: #9fb0a4; }
+    .prob-track { height: 6px; overflow: hidden; border-radius: 9px; background: rgba(255, 255, 255, .09); }
+    .prob-track i { display: block; width: var(--value); height: 100%; border-radius: inherit; background: var(--green-bright); transition: width .55s cubic-bezier(.2,.7,.2,1); }
+    .prob-row.selected { color: var(--white); }
+    .prob-row.selected .prob-track i { background: var(--lime); }
+    .demo-result { display: grid; grid-template-columns: 1fr auto; gap: 16px; margin-top: 17px; padding: 17px 18px; border-radius: 17px; color: var(--forest); background: var(--paper); }
+    .demo-result strong { display: block; font-size: 19px; }
+    .demo-result small { color: #748077; }
+    .demo-confidence { align-self: center; padding: 7px 10px; border-radius: 999px; color: #276943; background: #dff5e6; font: 700 11px var(--mono); }
+    .demo-note { margin: 11px 3px 0; color: #839387; font-size: 10px; text-align: center; }
+
+    .fact-band { position: relative; z-index: 3; margin-top: -34px; }
+    .facts { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--line); border-radius: 22px; background: rgba(251, 252, 247, .96); box-shadow: var(--shadow); }
+    .fact { min-height: 148px; padding: 27px; border-right: 1px solid var(--line); }
+    .fact:last-child { border: 0; }
+    .fact b { display: block; margin-bottom: 14px; color: var(--green); font: 800 13px var(--mono); }
+    .fact strong { display: block; margin-bottom: 6px; font-size: 18px; }
+    .fact span { color: var(--muted); font-size: 13px; }
+
+    .loop-section { background: var(--paper); }
+    .loop { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0; counter-reset: loop; }
+    .loop-item { position: relative; padding: 0 12px; counter-increment: loop; }
+    .loop-item::before {
+      content: counter(loop, decimal-leading-zero);
+      display: grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      margin-bottom: 20px;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      color: var(--green);
+      background: var(--paper);
+      font: 800 11px var(--mono);
+    }
+    .loop-item:not(:last-child)::after { content: ""; position: absolute; left: 54px; right: -2px; top: 20px; height: 1px; background: var(--line); }
+    .loop-item h3 { margin-bottom: 9px; font-size: 16px; letter-spacing: -.02em; }
+    .loop-item p { margin: 0; color: var(--muted); font-size: 13px; }
+
+    .security-section { color: #eff8f0; background: var(--forest); overflow: hidden; }
+    .security-section .eyebrow { color: var(--lime); }
+    .security-section .lead { color: #acbbb0; }
+    .deployment-map { display: grid; grid-template-columns: 1fr 90px 1fr; gap: 22px; align-items: stretch; }
+    .boundary {
+      position: relative;
+      min-height: 430px;
+      padding: 30px;
+      border: 1px solid rgba(255, 255, 255, .13);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, .035);
+    }
+    .boundary.private { border-color: rgba(217, 255, 114, .4); background: linear-gradient(145deg, rgba(217, 255, 114, .09), rgba(255, 255, 255, .025)); }
+    .boundary-label { display: flex; align-items: center; justify-content: space-between; margin-bottom: 35px; }
+    .boundary-label span { padding: 6px 10px; border-radius: 999px; color: var(--lime); background: rgba(217, 255, 114, .1); font: 700 10px var(--mono); }
+    .boundary h3 { margin-bottom: 12px; font-size: 27px; }
+    .boundary > p { color: #9fb0a4; }
+    .node-stack { display: grid; gap: 9px; margin-top: 26px; }
+    .node { display: flex; align-items: center; gap: 12px; padding: 13px 14px; border-radius: 12px; color: #cfdbd2; background: rgba(255, 255, 255, .055); font-size: 13px; }
+    .node i { width: 9px; height: 9px; border-radius: 2px; background: var(--green-bright); }
+    .boundary.private .node i { background: var(--lime); }
+    .map-or { display: grid; place-items: center; color: #718478; font: 800 11px var(--mono); }
+    .guardrails { display: grid; grid-template-columns: repeat(3, 1fr); gap: 13px; margin-top: 46px; }
+    .guardrail { padding: 20px; border-top: 1px solid rgba(255, 255, 255, .13); }
+    .guardrail b { display: block; margin-bottom: 7px; color: var(--lime); font: 800 11px var(--mono); letter-spacing: .08em; }
+    .guardrail span { color: #a8b7ac; font-size: 13px; }
+
+    .control-grid { display: grid; grid-template-columns: .86fr 1.14fr; gap: 70px; align-items: center; }
+    .control-points { display: grid; gap: 2px; margin-top: 36px; border-top: 1px solid var(--line); }
+    .control-point { display: grid; grid-template-columns: 42px 1fr; gap: 17px; padding: 22px 0; border-bottom: 1px solid var(--line); }
+    .control-point i { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 11px; color: var(--forest); background: #e4f1e6; font-style: normal; font-weight: 850; }
+    .control-point strong { display: block; margin-bottom: 4px; }
+    .control-point span { color: var(--muted); font-size: 14px; }
+
+    .console {
+      padding: 13px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background: #dfe6df;
+      box-shadow: var(--shadow);
+      transform: perspective(1200px) rotateY(-3deg) rotateX(1deg);
+    }
+    .console-window { overflow: hidden; min-height: 520px; border-radius: 19px; background: var(--paper); }
+    .console-top { display: flex; align-items: center; gap: 7px; height: 42px; padding: 0 15px; color: #7c8980; background: var(--forest); font: 10px var(--mono); }
+    .console-top i { width: 7px; height: 7px; border-radius: 50%; background: #65796a; }
+    .console-top i:first-child { background: var(--lime); }
+    .console-top span { margin-left: 7px; }
+    .console-body { display: grid; grid-template-columns: 120px 1fr; min-height: 478px; }
+    .console-nav { padding: 20px 11px; color: #a4b0a7; background: #1b2b21; }
+    .console-brand { margin-bottom: 25px; color: white; font-weight: 800; }
+    .console-nav span { display: block; padding: 8px 7px; border-radius: 6px; font-size: 9px; }
+    .console-nav span.active { color: white; background: #2a3f31; }
+    .console-main { padding: 25px; }
+    .console-main h3 { margin-bottom: 5px; font-size: 20px; }
+    .console-main > p { color: var(--muted); font-size: 10px; }
+    .metric-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 22px 0 12px; }
+    .metric-card { padding: 13px; border: 1px solid var(--line); border-radius: 9px; background: white; }
+    .metric-card span { display: block; color: var(--muted); font-size: 8px; }
+    .metric-card strong { font-size: 20px; }
+    .chart-card { padding: 16px; border: 1px solid var(--line); border-radius: 10px; background: white; }
+    .chart-title { display: flex; justify-content: space-between; font-size: 9px; font-weight: 800; }
+    .mini-chart { height: 110px; display: flex; align-items: end; gap: 7px; margin-top: 18px; border-bottom: 1px solid var(--line); }
+    .mini-chart i { flex: 1; height: var(--h); border-radius: 5px 5px 0 0; background: #7abb94; }
+    .mini-chart i:nth-child(3n) { background: var(--green); }
+    .trace-row { display: grid; grid-template-columns: 1.3fr .7fr .6fr; gap: 10px; margin-top: 11px; padding: 10px 7px; border-bottom: 1px solid var(--line); color: var(--muted); font: 8px var(--mono); }
+    .trace-row b { color: var(--ink); }
+
+    .quickstart { color: #eef6ef; background: #0c1710; }
+    .quick-grid { display: grid; grid-template-columns: .82fr 1.18fr; gap: 75px; align-items: center; }
+    .quickstart .eyebrow { color: var(--lime); }
+    .quickstart h2 { max-width: 480px; }
+    .quickstart .lead { color: #95a79b; }
+    .code-block { overflow: hidden; border: 1px solid rgba(255, 255, 255, .13); border-radius: 22px; background: #101e15; box-shadow: 0 30px 80px rgba(0, 0, 0, .22); }
+    .code-head { display: flex; align-items: center; justify-content: space-between; padding: 13px 17px; border-bottom: 1px solid rgba(255, 255, 255, .09); color: #829487; font: 11px var(--mono); }
+    .copy-button { padding: 6px 10px; border: 1px solid rgba(255, 255, 255, .16); border-radius: 8px; color: #cbd8ce; background: transparent; font: 11px var(--mono); cursor: pointer; }
+    pre { margin: 0; padding: 28px; white-space: pre-wrap; color: #d7e1d9; font: 13px/1.9 var(--mono); }
+    pre .comment { color: #6f8375; }
+    pre .command { color: var(--lime); }
+    .quick-points { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 28px; }
+    .quick-points span { padding: 7px 11px; border: 1px solid rgba(255, 255, 255, .1); border-radius: 999px; color: #a3b3a8; font-size: 12px; }
+
+    .final-cta { position: relative; overflow: hidden; padding: 120px 0; text-align: center; }
+    .final-cta::before { content: ""; position: absolute; inset: 25% 10%; border-radius: 50%; background: radial-gradient(circle, rgba(88, 206, 136, .18), transparent 68%); filter: blur(20px); }
+    .final-cta .shell { position: relative; }
+    .final-cta h2 { max-width: 870px; margin: 0 auto 22px; }
+    .final-cta .lead { margin: 0 auto 34px; }
+    .final-actions { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+
+    footer { padding: 28px 0 45px; border-top: 1px solid var(--line); }
+    .footer-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; color: var(--muted); font-size: 12px; }
+    .footer-links { display: flex; gap: 20px; }
+    .footer-links a { text-decoration: none; }
+    .footer-links a:hover { color: var(--green); }
+
+    .reveal { opacity: 0; transform: translateY(24px); transition: opacity .7s ease, transform .7s ease; }
+    .reveal.visible { opacity: 1; transform: none; }
+
+    @media (max-width: 980px) {
+      .hero { min-height: auto; }
+      .hero-grid, .control-grid, .quick-grid { grid-template-columns: 1fr; }
+      .hero-grid { gap: 55px; }
+      .router-demo { max-width: 620px; margin: 0 auto; transform: none; }
+      .facts { grid-template-columns: 1fr 1fr; }
+      .fact:nth-child(2) { border-right: 0; }
+      .fact:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+      .loop { grid-template-columns: repeat(2, 1fr); gap: 30px 0; }
+      .loop-item:not(:last-child)::after { display: none; }
+      .deployment-map { grid-template-columns: 1fr; }
+      .map-or { min-height: 40px; }
+      .section-head.split { display: block; }
+      .console { transform: none; }
+    }
+
+    @media (max-width: 720px) {
+      .shell { width: min(100% - 28px, 1180px); }
+      .section { padding: 82px 0; }
+      .nav { height: 66px; }
+      .menu-button { position: absolute; top: 14px; right: 18px; z-index: 3; display: block; }
+      .nav-links {
+        position: absolute;
+        inset: 66px 14px auto;
+        display: none;
+        align-items: stretch;
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 17px;
+        background: var(--paper);
+        box-shadow: var(--shadow);
+      }
+      .nav-links.open { display: grid; }
+      .nav-cta { text-align: center; }
+      .hero { padding-top: 124px; }
+      .hero-grid { display: block; }
+      .hero-copy { width: 100%; }
+      .hero h1 { width: 100%; font-size: clamp(42px, 12.5vw, 58px); }
+      .hero h1 > span { white-space: normal; }
+      .hero-copy > p { width: 100%; overflow-wrap: anywhere; }
+      .hero .eyebrow { max-width: 100%; overflow: hidden; white-space: nowrap; font-size: 10px; }
+      .hero-actions { display: grid; grid-template-columns: 1fr; }
+      .hero-actions .button { width: 100%; }
+      .micro-proof { display: grid; grid-template-columns: 1fr; }
+      .router-demo { width: 100%; max-width: none; margin: 58px 0 0; }
+      .fact-band { margin-top: 0; }
+      .facts { grid-template-columns: 1fr; }
+      .fact { min-height: auto; border-right: 0; border-bottom: 1px solid var(--line); }
+      .fact:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+      .loop { grid-template-columns: 1fr; }
+      .loop-item { display: grid; grid-template-columns: 46px 1fr; gap: 0 14px; }
+      .loop-item::before { grid-row: 1 / 3; }
+      .guardrails { grid-template-columns: 1fr; }
+      .boundary { min-height: auto; }
+      .console-body { grid-template-columns: 1fr; }
+      .console-nav { display: none; }
+      .console-main { padding: 18px; }
+      .metric-row { grid-template-columns: 1fr 1fr; }
+      .metric-card:last-child { grid-column: 1 / -1; }
+      .footer-row { align-items: flex-start; flex-direction: column; }
+      .footer-links { flex-wrap: wrap; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+      .reveal { opacity: 1; transform: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar" id="topbar">
+    <nav class="nav shell" aria-label="主导航">
+      <a class="logo" href="#top" aria-label="RouteTune 首页"><span class="logo-mark">R</span><span>RouteTune</span></a>
+      <button class="menu-button" id="menu-button" type="button" aria-label="展开导航" aria-expanded="false">☰</button>
+      <div class="nav-links" id="nav-links">
+        <a href="#loop">产品闭环</a>
+        <a href="#security">私有化与安全</a>
+        <a href="#product">产品界面</a>
+        <a href="#quickstart">快速开始</a>
+        <a class="nav-cta" href="https://github.com/HuggingAI/RouteTune">GitHub ↗</a>
+      </div>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="hero-grid shell">
+        <div class="hero-copy reveal">
+          <p class="eyebrow">Self-hosted LLM routing loop</p>
+          <h1><span>不是更大的模型，</span><span>而是<em>刚好够用</em>。</span></h1>
+          <p>RouteTune 用你的真实请求、候选模型输出和人工反馈，训练轻量概率分类 Router。私有化部署，统一 API 接入，每一次路由都可追溯、可发布、可回滚。</p>
+          <div class="hero-actions">
+            <a class="button primary" href="#quickstart">3 分钟本地体验 <span>↓</span></a>
+            <a class="button ghost" href="https://github.com/HuggingAI/RouteTune">查看 GitHub <span>↗</span></a>
+          </div>
+          <div class="micro-proof">
+            <span>非生成式 Router</span>
+            <span>OpenAI-compatible API</span>
+            <span>零 Key Demo</span>
+          </div>
+        </div>
+
+        <aside class="router-demo reveal" aria-label="路由结果交互示意">
+          <div class="demo-top"><strong>概率分类 Router</strong><span class="live"><i></i> READY</span></div>
+          <div class="demo-query"><small>REQUEST</small><p id="demo-query">审查这份采购合同的违约风险</p></div>
+          <div class="query-presets" aria-label="示例请求">
+            <button type="button" data-preset="summary">内容总结</button>
+            <button class="active" type="button" data-preset="contract">合同审查</button>
+            <button type="button" data-preset="extract">结构提取</button>
+          </div>
+          <div class="probability-list" id="probabilities"></div>
+          <div class="demo-result">
+            <div><small>ROUTE DECISION</small><strong id="demo-model">tier_5 → strong-model</strong></div>
+            <span class="demo-confidence" id="demo-confidence">68% CONF.</span>
+          </div>
+          <p class="demo-note">交互示意 · 概率和模型名称不代表真实评测结果</p>
+        </aside>
+      </div>
+    </section>
+
+    <section class="fact-band shell reveal" aria-label="产品特点">
+      <div class="facts">
+        <article class="fact"><b>01 / LEARN</b><strong>真实反馈驱动</strong><span>用自己的业务请求与 pass / fail 训练，不被公共榜单定义。</span></article>
+        <article class="fact"><b>02 / HOST</b><strong>私有化部署</strong><span>控制面、Router、Trace 与标注数据运行在自己的基础设施。</span></article>
+        <article class="fact"><b>03 / PROTECT</b><strong>双向安全脱敏</strong><span>模型调用前与业务返回前都经过敏感实体扫描。</span></article>
+        <article class="fact"><b>04 / RELEASE</b><strong>受控发布</strong><span>草稿不碰生产；不可变 Release 支持人工发布、追溯与回滚。</span></article>
+      </div>
+    </section>
+
+    <section class="section loop-section" id="loop">
+      <div class="shell">
+        <div class="section-head split reveal">
+          <div><p class="eyebrow">One continuous loop</p><h2>不是模块拼装，<br>是一条学习闭环。</h2></div>
+          <p class="lead">模型池、安全、Trace、标注和发布只服务于一件事：让 Router 在真实业务反馈中持续变好。</p>
+        </div>
+        <div class="loop reveal">
+          <article class="loop-item"><h3>接入模型</h3><p>内部 LiteLLM 与外部 Provider 平级。</p></article>
+          <article class="loop-item"><h3>导入请求</h3><p>JSONL 只要求标准 messages。</p></article>
+          <article class="loop-item"><h3>运行对比</h3><p>冻结批次、参数和候选模型。</p></article>
+          <article class="loop-item"><h3>人工审阅</h3><p>同屏查看 GT 与多个模型输出。</p></article>
+          <article class="loop-item"><h3>训练 Router</h3><p>输出固定层级及概率分布。</p></article>
+          <article class="loop-item"><h3>发布版本</h3><p>人工确认不可变候选 Release。</p></article>
+          <article class="loop-item"><h3>线上回流</h3><p>Trace 与失败反馈进入下一轮。</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section security-section" id="security">
+      <div class="shell">
+        <div class="section-head split reveal">
+          <div><p class="eyebrow">Your infrastructure, your boundary</p><h2>私有化部署，<br>数据边界由你决定。</h2></div>
+          <p class="lead">RouteTune 不要求业务数据上传到托管控制面。连接内部模型时完整链路留在内网；连接外部模型时，只向你指定的 Provider 发送经过出站处理的请求。</p>
+        </div>
+
+        <div class="deployment-map reveal">
+          <article class="boundary private">
+            <div class="boundary-label"><strong>完整私有链路</strong><span>NO DATA EGRESS</span></div>
+            <h3>内部 LiteLLM / 私有模型</h3>
+            <p>适合对数据出网有严格限制的企业环境。</p>
+            <div class="node-stack">
+              <div class="node"><i></i>业务系统与 RouteTune 统一 API</div>
+              <div class="node"><i></i>Router、Trace、标注与 Release</div>
+              <div class="node"><i></i>内网 LiteLLM / OpenAI-compatible Endpoint</div>
+            </div>
+          </article>
+          <div class="map-or">OR</div>
+          <article class="boundary">
+            <div class="boundary-label"><strong>可控外部调用</strong><span>REDACTED EGRESS</span></div>
+            <h3>外部模型 Provider</h3>
+            <p>适合快速接入 OpenRouter、硅基流动、DeepSeek、MiniMax 等服务。</p>
+            <div class="node-stack">
+              <div class="node"><i></i>控制面、Trace 与标注仍保留在本地</div>
+              <div class="node"><i></i>请求出站前执行正则、词典与可选 NER</div>
+              <div class="node"><i></i>脱敏请求仅发往部署方指定的 Provider</div>
+            </div>
+          </article>
+        </div>
+
+        <div class="guardrails reveal">
+          <div class="guardrail"><b>BEFORE MODEL</b><span>出站前识别邮箱、手机号、证件号、Token 及客户词典实体。</span></div>
+          <div class="guardrail"><b>AFTER MODEL</b><span>模型输出再次扫描，避免敏感信息直接进入业务响应。</span></div>
+          <div class="guardrail"><b>MINIMAL TRACE</b><span>默认只存脱敏正文，敏感场景可以只保留 metadata。</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="product">
+      <div class="control-grid shell">
+        <div class="reveal">
+          <p class="eyebrow">Control plane, not a black box</p>
+          <h2>看得见，<br>才谈得上优化。</h2>
+          <p class="lead">统一 API 背后的每次选择都有版本、原因和实际模型；线上运行与路由优化被组织成两个清晰工作面。</p>
+          <div class="control-points">
+            <div class="control-point"><i>↗</i><div><strong>API 运行</strong><span>观察模型分布、成功率、延迟、Input/Output Token 与失败原因。</span></div></div>
+            <div class="control-point"><i>◎</i><div><strong>路由优化</strong><span>完成批次运行、集中审阅、Router 训练、候选版本和人工发布。</span></div></div>
+            <div class="control-point"><i>↺</i><div><strong>版本可追溯</strong><span>每条 Trace 固定关联 Deployment、Release、路由层级与实际模型。</span></div></div>
+          </div>
+        </div>
+
+        <div class="console reveal" aria-label="RouteTune 产品界面示意">
+          <div class="console-window">
+            <div class="console-top"><i></i><i></i><i></i><span>RouteTune / Production</span></div>
+            <div class="console-body">
+              <aside class="console-nav"><div class="console-brand">R&nbsp; RouteTune</div><span class="active">运行大盘</span><span>请求记录</span><span>Playground</span><span>数据批次</span><span>批次审阅</span><span>版本发布</span><span>安全策略</span></aside>
+              <div class="console-main">
+                <h3>Production 运行概览</h3><p>统一 API 的流量、模型、Token 与稳定性</p>
+                <div class="metric-row">
+                  <div class="metric-card"><span>API 请求</span><strong>1,284</strong></div>
+                  <div class="metric-card"><span>成功率</span><strong>98.7%</strong></div>
+                  <div class="metric-card"><span>P95 延迟</span><strong>1.8s</strong></div>
+                </div>
+                <div class="chart-card">
+                  <div class="chart-title"><span>请求趋势</span><span>最近 7 天</span></div>
+                  <div class="mini-chart"><i style="--h:44%"></i><i style="--h:62%"></i><i style="--h:53%"></i><i style="--h:78%"></i><i style="--h:69%"></i><i style="--h:91%"></i><i style="--h:82%"></i></div>
+                </div>
+                <div class="trace-row"><b>合同续约风险审查</b><span>tier_5</span><span>strong</span></div>
+                <div class="trace-row"><b>工单内容归类</b><span>tier_1</span><span>fast</span></div>
+                <div class="trace-row"><b>发票字段提取</b><span>tier_3</span><span>balanced</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section quickstart" id="quickstart">
+      <div class="quick-grid shell">
+        <div class="reveal">
+          <p class="eyebrow">Zero-key local demo</p>
+          <h2>三行命令，<br>跑完整闭环。</h2>
+          <p class="lead">Docker Compose 默认启动三个本地 Mock 模型。无需配置任何模型 Key，不产生调用费用。</p>
+          <div class="quick-points"><span>管理后台</span><span>统一 API</span><span>Mock Provider</span><span>持久化 Volume</span></div>
+        </div>
+        <div class="code-block reveal">
+          <div class="code-head"><span>TERMINAL</span><button class="copy-button" id="copy-button" type="button">复制命令</button></div>
+          <pre id="install-command"><span class="command">git clone</span> https://github.com/HuggingAI/RouteTune.git
+<span class="command">cd</span> RouteTune
+<span class="command">cp</span> .env.example .env
+<span class="command">docker compose up</span> --build -d
+
+<span class="comment"># 打开 http://127.0.0.1:8787/admin</span></pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="final-cta">
+      <div class="shell reveal">
+        <p class="eyebrow">Route with evidence</p>
+        <h2>让路由来自真实反馈，<br>而不是另一套猜测。</h2>
+        <p class="lead">从零 Key Demo 开始，导入十条自己的请求，走完一次模型对比、人工审阅、Router 训练和版本发布。</p>
+        <div class="final-actions">
+          <a class="button primary" href="https://github.com/HuggingAI/RouteTune">在 GitHub 查看项目 ↗</a>
+          <a class="button accent" href="#quickstart">立即本地运行</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="footer-row shell">
+      <a class="logo" href="#top"><span class="logo-mark">R</span><span>RouteTune</span></a>
+      <p>Apache-2.0 · 当前版本为单实例开源 MVP</p>
+      <div class="footer-links"><a href="https://github.com/HuggingAI/RouteTune">GitHub</a><a href="https://github.com/HuggingAI/RouteTune/blob/main/docs/DEPLOYMENT.md">部署文档</a><a href="https://github.com/HuggingAI/RouteTune/blob/main/SECURITY.md">安全策略</a></div>
+    </div>
+  </footer>
+
+  <script>
+    const presets = {
+      summary: {
+        query: "把这封客户邮件概括成三点",
+        values: [74, 13, 7, 4, 2],
+        selected: 0,
+        model: "tier_1 → fast-model"
+      },
+      contract: {
+        query: "审查这份采购合同的违约风险",
+        values: [3, 6, 9, 14, 68],
+        selected: 4,
+        model: "tier_5 → strong-model"
+      },
+      extract: {
+        query: "提取发票字段并输出标准 JSON",
+        values: [9, 14, 63, 10, 4],
+        selected: 2,
+        model: "tier_3 → balanced-model"
+      }
+    };
+
+    const probabilityList = document.querySelector("#probabilities");
+    function renderPreset(name) {
+      const preset = presets[name];
+      document.querySelector("#demo-query").textContent = preset.query;
+      document.querySelector("#demo-model").textContent = preset.model;
+      document.querySelector("#demo-confidence").textContent = `${preset.values[preset.selected]}% CONF.`;
+      probabilityList.innerHTML = preset.values.map((value, index) => `
+        <div class="prob-row ${index === preset.selected ? "selected" : ""}">
+          <span>tier_${index + 1}</span>
+          <span class="prob-track"><i style="--value:${value}%"></i></span>
+          <span>${value}%</span>
+        </div>`).join("");
+      document.querySelectorAll("[data-preset]").forEach(button => {
+        button.classList.toggle("active", button.dataset.preset === name);
+      });
+    }
+    document.querySelectorAll("[data-preset]").forEach(button => {
+      button.addEventListener("click", () => renderPreset(button.dataset.preset));
+    });
+    renderPreset("contract");
+
+    const topbar = document.querySelector("#topbar");
+    addEventListener("scroll", () => topbar.classList.toggle("scrolled", scrollY > 16), { passive: true });
+
+    const menuButton = document.querySelector("#menu-button");
+    const navLinks = document.querySelector("#nav-links");
+    menuButton.addEventListener("click", () => {
+      const open = navLinks.classList.toggle("open");
+      menuButton.setAttribute("aria-expanded", String(open));
+      menuButton.textContent = open ? "×" : "☰";
+    });
+    navLinks.querySelectorAll("a").forEach(link => link.addEventListener("click", () => {
+      navLinks.classList.remove("open");
+      menuButton.setAttribute("aria-expanded", "false");
+      menuButton.textContent = "☰";
+    }));
+
+    const installText = `git clone https://github.com/HuggingAI/RouteTune.git\ncd RouteTune\ncp .env.example .env\ndocker compose up --build -d`;
+    document.querySelector("#copy-button").addEventListener("click", async event => {
+      try {
+        await navigator.clipboard.writeText(installText);
+        event.currentTarget.textContent = "已复制 ✓";
+        setTimeout(() => { event.currentTarget.textContent = "复制命令"; }, 1600);
+      } catch (_) {
+        event.currentTarget.textContent = "请手动复制";
+      }
+    });
+
+    const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion || !("IntersectionObserver" in window)) {
+      document.querySelectorAll(".reveal").forEach(item => item.classList.add("visible"));
+    } else {
+      const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("visible");
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: .12 });
+      document.querySelectorAll(".reveal").forEach(item => observer.observe(item));
+    }
+  </script>
+</body>
+</html>

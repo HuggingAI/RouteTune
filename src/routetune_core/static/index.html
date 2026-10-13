@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>RouteTune Console</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/app.css?v=20261010-8">
+</head>
+<body>
+  <aside class="sidebar">
+    <a class="brand" href="#overview"><span class="brand-mark">R</span><span>RouteTune</span></a>
+    <nav>
+      <div class="nav-section"><span class="nav-label">API 运行</span>
+        <button class="nav-item active" data-page="overview"><span>⌁</span>运行大盘</button>
+        <button class="nav-item" data-page="traces"><span>≡</span>请求记录</button>
+        <button class="nav-item" data-page="playground"><span>▷</span>Playground</button>
+        <button class="nav-item" data-page="api"><span>↗</span>API 接入</button>
+      </div>
+      <div class="nav-section"><span class="nav-label">路由优化</span>
+        <button class="nav-item" data-page="batches"><span>▦</span>数据批次</button>
+        <button class="nav-item" data-page="reviews"><span>✓</span>批次审阅</button>
+        <button class="nav-item" data-page="models"><span>◇</span>路由策略</button>
+        <button class="nav-item" data-page="releases"><span>◆</span>版本发布</button>
+      </div>
+      <div class="nav-section"><span class="nav-label">系统</span>
+        <button class="nav-item" data-page="security"><span>◈</span>安全策略</button>
+      </div>
+    </nav>
+    <div class="sidebar-foot">
+      <a href="/docs" target="_blank">API 文档 ↗</a>
+      <div class="health"><i id="health-dot"></i><span id="health-text">正在连接</span></div>
+    </div>
+  </aside>
+
+  <main>
+    <header>
+      <div><h1 id="page-title">运行大盘</h1><p id="page-subtitle">统一 API 的流量、模型、Token 与稳定性</p></div>
+      <div class="header-actions">
+        <button id="token-button" class="button ghost">设置 API Key</button>
+        <button id="refresh-button" class="button">刷新</button>
+      </div>
+    </header>
+
+    <section id="page-overview" class="page active">
+      <div class="dashboard-head"><div><span class="eyebrow">UNIFIED API</span><h2>Production 运行概览</h2><p class="muted">所有业务请求都经过同一个入口，并在这里汇总。</p></div><label>统计范围<select id="dashboard-window"><option value="24h">最近 24 小时</option><option value="7d" selected>最近 7 天</option><option value="30d">最近 30 天</option><option value="all">全部</option></select></label></div>
+      <div class="metric-grid dashboard-metrics">
+        <article class="metric"><span>API 请求</span><strong id="metric-total">—</strong><small id="metric-completed">等待数据</small></article>
+        <article class="metric"><span>成功率</span><strong id="metric-success-rate">—</strong><small id="metric-failure-count">失败与拦截</small></article>
+        <article class="metric"><span>P95 延迟</span><strong id="metric-latency-p95">—</strong><small id="metric-latency-p50">P50 —</small></article>
+        <article class="metric"><span>Input Token</span><strong id="metric-input-tokens">—</strong><small>发送给模型</small></article>
+        <article class="metric"><span>Output Token</span><strong id="metric-output-tokens">—</strong><small>模型生成</small></article>
+        <article class="metric"><span>实际调用模型</span><strong id="metric-active-models">—</strong><small>统计范围内</small></article>
+      </div>
+      <div class="dashboard-grid wide-left">
+        <article class="panel"><div class="panel-title"><div><h2>请求趋势</h2><p class="muted">请求量、失败量与 Token 使用</p></div></div><div id="request-timeline" class="timeline empty">暂无调用数据</div></article>
+        <article class="panel"><div class="panel-title"><div><h2>模型调用分布</h2><p class="muted">实际承接请求的模型</p></div></div><div id="model-bars" class="bars empty">暂无调用数据</div></article>
+      </div>
+      <div class="dashboard-grid">
+        <article class="panel"><div class="panel-title"><div><h2>路由层级分布</h2><p class="muted">Router 输出的固定标签</p></div></div><div id="route-bars" class="bars empty">暂无路由数据</div></article>
+        <article class="panel"><div class="panel-title"><div><h2>失败情况</h2><p class="muted">Provider、安全与运行时错误</p></div><button class="text-button" data-go="traces">查看请求 →</button></div><div id="error-bars" class="bars empty">暂无失败请求</div></article>
+      </div>
+      <article class="panel"><div class="panel-title"><div><h2>模型运行表现</h2><p class="muted">用于观察模型分布、成功率、Token 和平均耗时，不参与人工打分。</p></div><button class="text-button" data-go="models">管理模型池 →</button></div><div id="model-performance"></div></article>
+      <div class="dashboard-grid deployment-grid">
+        <article class="panel"><div class="panel-title"><h2>Production Deployment</h2><button class="text-button" data-go="releases">管理发布 →</button></div><dl class="facts"><div><dt>活动 Release</dt><dd id="active-release">—</dd></div><div><dt>Engine Bundle</dt><dd id="bundle-version">—</dd></div><div><dt>路由模式</dt><dd id="route-mode">—</dd></div><div><dt>可用模型</dt><dd id="model-list">—</dd></div><div><dt>服务状态</dt><dd class="good">运行中</dd></div></dl></article>
+        <article class="panel"><div class="panel-title"><h2>最近请求</h2><button class="text-button" data-go="traces">查看全部 →</button></div><div id="recent-table"></div></article>
+      </div>
+    </section>
+
+    <section id="page-releases" class="page">
+      <div class="two-columns release-summary">
+        <article class="panel"><div class="panel-title"><div><h2>Production</h2><p class="muted">统一 API 当前只使用这个不可变版本。</p></div><span class="pill">ACTIVE</span></div><dl class="facts"><div><dt>Release</dt><dd id="deployment-release" class="mono">—</dd></div><div><dt>Router Bundle</dt><dd id="deployment-bundle">—</dd></div><div><dt>发布时间</dt><dd id="deployment-time">—</dd></div><div><dt>更新方式</dt><dd>原子切换 · 可回滚</dd></div></dl></article>
+        <article class="panel"><div class="panel-title"><div><h2>当前配置草稿</h2><p class="muted">模型池和安全策略的修改不会直接影响生产。</p></div></div><p>这里只快照当前 Router 与配置，不会训练新 Router。训练结果由“数据与实验”生成。</p><label class="release-notes">版本说明<textarea id="release-notes" rows="3" placeholder="例如：调整 tier_2 模型并加入项目词典"></textarea></label><button id="create-release-button" class="button primary">生成配置候选版本</button></article>
+      </div>
+      <article id="trained-release-notice" class="panel trained-release-notice hidden"></article>
+      <article class="panel"><div class="panel-title"><div><h2>版本历史</h2><p class="muted">候选版本发布后生效；重新发布历史版本即完成回滚。</p></div></div><div class="list-toolbar"><input id="release-search" type="search" placeholder="搜索 Release、Bundle 或批次"><select id="release-filter"><option value="">全部状态</option><option value="candidate">候选</option><option value="published">生产中</option><option value="superseded">历史版本</option></select><label>每页<select data-list-size="releases"><option>10</option><option>20</option><option>50</option></select></label></div><div id="release-table"></div><div id="release-pager" class="list-pager"></div></article>
+    </section>
+
+    <section id="page-playground" class="page">
+      <div class="playground-grid">
+        <article class="panel compose">
+          <div class="panel-title"><h2>发送测试请求</h2><span class="pill">model: auto</span></div>
+          <label for="system-input">System message（可选）</label>
+          <textarea id="system-input" rows="3" placeholder="你是一个有帮助的助手。"></textarea>
+          <label for="user-input">User message</label>
+          <textarea id="user-input" rows="10" placeholder="输入请求。邮箱、手机号、证件号和密钥会在发往模型前脱敏。"></textarea>
+          <div class="request-options"><label>Max tokens（可选）<input id="request-max-tokens" type="number" min="1" placeholder="使用模型默认值"></label><label>Temperature（可选）<input id="request-temperature" type="number" min="0" max="2" step="0.1" placeholder="使用模型默认值"></label><label>Top P（可选）<input id="request-top-p" type="number" min="0" max="1" step="0.05" placeholder="使用模型默认值"></label><label>Top K（可选）<input id="request-top-k" type="number" min="1" step="1" placeholder="使用模型默认值"></label></div>
+          <div class="compose-foot"><span id="send-status" class="muted">请求会被自动路由</span><button id="send-button" class="button primary">发送请求</button></div>
+        </article>
+        <article class="panel result-panel">
+          <div class="panel-title"><h2>模型输出</h2><span id="result-model" class="pill subtle">等待请求</span></div>
+          <div id="result-empty" class="empty-state"><span>▷</span><p>发送一条消息查看路由结果</p></div>
+          <div id="result-content" class="hidden">
+            <pre id="answer"></pre>
+            <div class="route-card"><div><span>选择模型</span><strong id="selected-model">—</strong></div><div><span>实际模型</span><strong id="actual-model">—</strong></div><div><span>路由原因</span><strong id="route-reason">—</strong></div><div><span>延迟</span><strong id="result-latency">—</strong></div></div>
+            <div class="feedback"><span>这个回答是否合格？</span><button id="pass-button" class="button good-button">✓ Pass</button><button id="fail-button" class="button bad-button">✗ Fail</button></div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="page-api" class="page">
+      <div class="two-columns api-layout">
+        <article class="panel">
+          <div class="panel-title"><div><h2>统一外部 API</h2><p class="muted">业务系统与 Playground 都只调用这个入口。</p></div><span class="pill">OpenAI-compatible</span></div>
+          <dl class="facts"><div><dt>Endpoint</dt><dd id="public-api-endpoint" class="mono">—</dd></div><div><dt>Model</dt><dd><code>auto</code></dd></div><div><dt>协议</dt><dd>无状态单轮 messages</dd></div><div><dt>鉴权</dt><dd>可选 Bearer ROUTETUNE_API_KEY</dd></div></dl>
+          <p class="api-actions"><button id="copy-api-endpoint" class="button">复制 Endpoint</button><a class="button" href="/docs" target="_blank">打开 OpenAPI 文档 ↗</a></p>
+        </article>
+        <article class="panel">
+          <div class="panel-title"><div><h2>内部调用边界</h2><p class="muted">Provider 只属于 RouteTune 内部，不是产品入口。</p></div></div>
+          <div class="flow-stack"><div class="flow-line"><span>业务 / Playground</span><b>→</b><span>RouteTune API</span><b>→</b><span>Router</span><b>→</b><span>模型池</span></div><div class="provider-branches"><span>本地 LiteLLM</span><span>OpenRouter</span><span>硅基流动</span><span>其他 Provider</span></div></div>
+        </article>
+      </div>
+      <article class="panel">
+          <div class="panel-title"><div><h2>调用示例</h2><p class="muted">生成参数属于本次请求；省略时使用模型池默认值，再回退到 Provider 默认值。</p></div><button id="copy-api-example" class="text-button">复制</button></div>
+        <pre id="api-example" class="api-code"></pre>
+      </article>
+    </section>
+
+    <section id="page-traces" class="page">
+      <article class="panel">
+        <div class="panel-title"><div><h2>全部请求</h2><p class="muted">默认查看统一 API 流量；批次内部调用可单独筛选。</p></div></div><div class="list-toolbar"><input id="trace-search" type="search" placeholder="搜索输入、模型或 Trace ID"><select id="trace-source-filter"><option value="api" selected>统一 API</option><option value="batch">批次内部调用</option><option value="">全部来源</option></select><select id="status-filter"><option value="">全部状态</option><option value="completed">已完成</option><option value="failed">失败</option><option value="blocked">已拦截</option></select><label>每页<select data-list-size="traces"><option>10</option><option>20</option><option>50</option></select></label></div>
+        <div id="trace-table"></div>
+        <div id="trace-pager" class="list-pager"></div>
+      </article>
+    </section>
+
+    <section id="page-models" class="page">
+      <article class="panel">
+        <div class="panel-title"><div><h2>模型池</h2><p class="muted">Router 只输出固定层级；每个层级可挂多个模型，按 cost rank 选择和回退。</p><p id="model-monitor-status" class="monitor-status">可用性检测状态读取中…</p></div><button id="add-model-button" class="button primary">添加模型</button></div><div class="list-toolbar"><input id="model-search" type="search" placeholder="搜索模型、Provider、标签"><select id="model-filter"><option value="">全部模型</option><option value="available">可用</option><option value="unavailable">不可用</option><option value="unchecked">未检测</option><option value="disabled">已停用</option></select><label>每页<select data-list-size="models"><option>10</option><option>20</option><option>50</option></select></label></div>
+        <div id="model-table"></div>
+        <div id="model-pager" class="list-pager"></div>
+      </article>
+    </section>
+
+    <section id="page-security" class="page">
+      <div class="two-columns batch-layout">
+        <article class="panel">
+          <div class="panel-title"><div><h2>上传敏感实体词典</h2><p class="muted">保存到当前草稿；生成候选版本并发布后用于生产 API。</p></div></div>
+          <form id="dictionary-form" class="stack-form"><label>词典名称<input id="dictionary-name" required maxlength="200" placeholder="例如 客户与内部项目名"></label><label>JSON 文件<input id="dictionary-file" type="file" accept=".json,application/json" required></label><p class="muted">格式：<code>{"CUSTOMER":["客户甲"],"PROJECT":["项目代号"]}</code></p><button class="button primary" type="submit">上传并启用</button></form>
+        </article>
+        <article class="panel"><div class="panel-title"><div><h2>安全边界</h2></div></div><dl class="facts"><div><dt>内置检测</dt><dd>邮箱、手机号、身份证、Token、API Key</dd></div><div><dt>自定义词典</dt><dd>客户名、项目名、内部系统等</dd></div><div><dt>接口返回</dt><dd>只返回类型和数量，不返回原始词条</dd></div><div><dt>生效范围</dt><dd>出站、返回、日志与批次导入</dd></div></dl></article>
+      </div>
+      <article class="panel"><div class="panel-title"><div><h2>已上传词典</h2><p class="muted">停用后词典仍保留，但不参与实体识别。</p></div></div><div class="list-toolbar"><input id="dictionary-search" type="search" placeholder="搜索词典或实体类型"><select id="dictionary-filter"><option value="">全部状态</option><option value="enabled">启用</option><option value="disabled">停用</option></select><label>每页<select data-list-size="dictionaries"><option>10</option><option>20</option><option>50</option></select></label></div><div id="dictionary-table"></div><div id="dictionary-pager" class="list-pager"></div></article>
+    </section>
+
+    <section id="page-batches" class="page">
+      <div class="two-columns batch-layout">
+        <article class="panel">
+          <div class="panel-title"><div><h2>上传 JSONL</h2><p class="muted">每行必须包含单轮 messages；id、metadata 和四个常用生成参数均可选。</p></div></div>
+          <form id="batch-form"><label>批次名称<input id="batch-name" required placeholder="企业场景测试-01"></label><input id="batch-mode" type="hidden" value="compare"><div id="batch-model-wrap"><span class="form-label">选择候选模型（至少 2 个）</span><div id="batch-model-options" class="model-picker"></div></div><div class="request-options"><label>Max tokens<input id="batch-max-tokens" type="number" min="1" value="512"></label><label>Temperature<input id="batch-temperature" type="number" min="0" max="2" step="0.1" value="0"></label><label>Top P（可选）<input id="batch-top-p" type="number" min="0" max="1" step="0.05" placeholder="使用单条/模型默认值"></label><label>Top K（可选）<input id="batch-top-k" type="number" min="1" step="1" placeholder="使用单条/模型默认值"></label></div><p class="muted">批次值覆盖 JSONL 单条值；单条值覆盖模型默认值；最后才使用 Provider 默认值。</p><label>JSONL 文件<input id="batch-file" type="file" accept=".jsonl,application/json" required></label><div class="sample-link"><a href="/assets/sample-enterprise-queries.jsonl" download>下载 10 条示例数据</a></div><button class="button primary" type="submit">导入并检查</button></form>
+        </article>
+        <article class="panel"><div class="panel-title"><div><h2 id="batch-help-title">训练 Router</h2></div></div><div id="batch-mode-help"></div></article>
+      </div>
+      <article class="panel"><div class="panel-title"><h2>批次列表</h2><button id="refresh-batches" class="text-button">刷新</button></div><div class="list-toolbar"><input id="batch-search" type="search" placeholder="搜索批次名称或 ID"><select id="batch-filter"><option value="">全部状态</option><option value="ready">待开始</option><option value="queued">排队中</option><option value="running">执行中</option><option value="completed">已完成</option><option value="failed">失败</option></select><label>每页<select data-list-size="batches"><option>10</option><option>20</option><option>50</option></select></label></div><div id="batch-table"></div><div id="batch-pager" class="list-pager"></div></article>
+    </section>
+
+    <section id="page-reviews" class="page">
+      <div class="review-summary-grid">
+        <article class="metric"><span>可审阅批次</span><strong id="review-batch-total">—</strong><small>已开始执行的批次</small></article>
+        <article class="metric"><span>待标注输出</span><strong id="review-output-pending">—</strong><small>成功返回但尚未判断</small></article>
+        <article class="metric"><span>已标注输出</span><strong id="review-output-done">—</strong><small>Pass / Fail 均计入</small></article>
+        <article class="metric"><span>可训练批次</span><strong id="review-train-ready">—</strong><small>标注已满足训练条件</small></article>
+      </div>
+      <article class="panel review-batch-panel">
+        <div class="panel-title"><div><h2>选择一个批次开始审阅</h2><p class="muted">批次是工作单元；进入批次后再逐题、逐模型标注。</p></div><button class="text-button" data-go="batches">导入新批次 →</button></div>
+        <div class="list-toolbar"><input id="review-search" type="search" placeholder="搜索批次名称或 ID"><select id="review-filter"><option value="">全部可审阅批次</option><option value="pending">待审阅</option><option value="in_progress">审阅中</option><option value="train_ready">可训练</option><option value="done">已完成标注</option></select><label>每页<select data-list-size="reviews"><option>10</option><option>20</option><option>50</option></select></label></div>
+        <div id="review-batch-table"></div>
+        <div id="review-pager" class="list-pager"></div>
+      </article>
+    </section>
+  </main>
+
+  <dialog id="trace-dialog"><div class="dialog-head"><div><span class="eyebrow">TRACE DETAIL</span><h2 id="dialog-title">请求详情</h2></div><button class="icon-button" id="close-dialog">×</button></div><div id="dialog-body"></div></dialog>
+  <dialog id="token-dialog"><form method="dialog"><div class="dialog-head"><h2>连接设置</h2><button class="icon-button" value="cancel">×</button></div><p class="muted">如果服务设置了 <code>ROUTETUNE_API_KEY</code>，请在此输入。密钥只保存在当前浏览器会话。</p><label for="token-input">API Key</label><input id="token-input" type="password" autocomplete="off" placeholder="留空表示未启用鉴权"><div class="dialog-actions"><button value="cancel" class="button ghost">取消</button><button id="save-token" value="default" class="button primary">保存</button></div></form></dialog>
+  <dialog id="model-dialog"><form id="model-form"><div class="dialog-head"><div><span class="eyebrow">MODEL POOL</span><h2 id="model-dialog-title">添加模型</h2></div><button class="icon-button" type="button" id="close-model-dialog">×</button></div><div class="form-grid"><label>Provider<select id="model-provider"><option value="openrouter">OpenRouter</option><option value="siliconflow">硅基流动</option><option value="deepseek">DeepSeek</option><option value="custom">Custom OpenAI-compatible</option></select></label><label>内部 Model ID<input id="model-id" required placeholder="openrouter-free-1"></label><div id="custom-provider-fields" class="form-grid nested wide hidden"><label>Provider ID<input id="custom-provider-id" placeholder="internal-litellm"></label><label>Base URL<input id="custom-base-url" placeholder="http://litellm.internal:4000/v1"></label><label>API Key 环境变量<input id="custom-key-env" placeholder="INTERNAL_LITELLM_API_KEY"></label><label class="check-label"><input id="custom-no-auth" type="checkbox"> 无需鉴权</label></div><label class="wide">Provider model slug<input id="api-model" required placeholder="例如 openai/gpt-oss-20b:free"></label><label>路由层级<select id="model-tier"><option value="tier_1">Tier 1 · 轻量</option><option value="tier_2">Tier 2 · 常规</option><option value="tier_3">Tier 3 · 标准</option><option value="tier_4">Tier 4 · 强力</option><option value="tier_5">Tier 5 · 专家</option></select></label><label>Cost rank<input id="cost-rank" type="number" min="1" value="10" required></label><label>能力标签<input id="model-tags" placeholder="free, general"></label><div class="wide"><span class="form-label">模型默认生成参数</span><p class="muted compact">按官方建议填写；请求或批次可覆盖。留空表示交给 Provider。</p><div class="request-options"><label>Max tokens<input id="model-max-tokens" type="number" min="1" value="1024" required></label><label>Temperature<input id="model-temperature" type="number" min="0" max="2" step="0.1" placeholder="Provider 默认"></label><label>Top P<input id="model-top-p" type="number" min="0" max="1" step="0.05" placeholder="Provider 默认"></label><label>Top K<input id="model-top-k" type="number" min="1" step="1" placeholder="Provider 默认"></label></div></div><label class="wide">Provider API Key（可选）<input id="provider-key" type="password" autocomplete="off" placeholder="仅注入当前服务进程，不会写入数据库"></label><label class="check-label"><input id="model-enabled" type="checkbox" checked> 启用模型</label></div><p id="model-env-hint" class="muted"></p><div class="dialog-actions"><button type="button" id="cancel-model" class="button ghost">取消</button><button type="submit" class="button primary">保存模型</button></div></form></dialog>
+  <dialog id="batch-dialog" class="batch-dialog"><div class="dialog-head"><div><span class="eyebrow">ROUTER TRAINING</span><h2 id="batch-dialog-title">批次工作台</h2></div><button class="icon-button" id="close-batch-dialog">×</button></div><div id="batch-dialog-body"></div></dialog>
+  <dialog id="router-training-dialog"><form id="router-training-form"><div class="dialog-head"><div><span class="eyebrow">PROBABILISTIC CLASSIFIER</span><h2>选择 Router 训练方案</h2></div><button class="icon-button" type="button" id="close-router-training">×</button></div><p class="muted">训练器接收请求文本，输出固定路由标签的概率分布；低置信度或分布外请求按策略回退。</p><div id="router-trainer-options" class="trainer-options"></div><div class="dialog-actions"><button type="button" class="button ghost" id="cancel-router-training">取消</button><button type="submit" class="button primary" id="confirm-router-training">开始训练</button></div></form></dialog>
+  <dialog id="training-result-dialog"><div class="dialog-head"><div><span class="eyebrow">TRAINING COMPLETE</span><h2>Router 训练完成</h2></div><button class="icon-button" id="close-training-result">×</button></div><div id="training-result-body"></div></dialog>
+  <div id="toast" role="status"></div>
+  <script src="/assets/app.js?v=20261010-17"></script>
+</body>
+</html>

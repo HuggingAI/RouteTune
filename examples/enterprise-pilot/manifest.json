@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "generated_records": {
+    "smoke": 12,
+    "full": 30
+  },
+  "source_files": {
+    "Banking77": {
+      "filename": "routetune-banking77-test.csv",
+      "sha256": "d12d6e3bc4c3103966ae786dc435913c0c563dfa328f5a3646d0e62cfeeb474d"
+    },
+    "MASSIVE": {
+      "filename": "routetune-massive-zh.parquet",
+      "sha256": "2fddf810840dcbbb4af0701f264bdfeb0ccdd4ee771f6871ec0c259b49826442"
+    },
+    "FinQA": {
+      "filename": "routetune-finqa-test.json",
+      "sha256": "831dbfb2e785dbc227f895ce3f24046433467aec67b09db2bd6ac7692a8a30dc"
+    }
+  },
+  "counts_by_source": {
+    "Banking77": 10,
+    "MASSIVE": 10,
+    "FinQA": 10
+  },
+  "notes": "Ground truth is metadata only and is not included in model messages."
+}

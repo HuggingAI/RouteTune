@@ -1,0 +1,28 @@
+# Local source-development pool. Start it with:
+# uv run routetune mock-litellm --host 127.0.0.1 --port 4000
+[providers.local_mock]
+base_url = "http://127.0.0.1:4000/v1"
+api_key_env = ""
+
+[models."mock-fast"]
+provider = "local_mock"
+api_model = "mock-fast"
+cost_rank = 1
+max_tokens = 512
+route_label = "tier_1"
+tags = ["demo", "local", "free"]
+[models."mock-balanced"]
+provider = "local_mock"
+api_model = "mock-balanced"
+cost_rank = 2
+max_tokens = 1024
+route_label = "tier_3"
+tags = ["demo", "local", "free"]
+
+[models."mock-strong"]
+provider = "local_mock"
+api_model = "mock-strong"
+cost_rank = 3
+max_tokens = 2048
+route_label = "tier_5"
+tags = ["demo", "local", "free"]

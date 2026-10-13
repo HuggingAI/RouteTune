@@ -1,0 +1,10 @@
+{"id":"enterprise-001","messages":[{"role":"user","content":"把这句话改得更礼貌：你们的发票开错了，今天重新发给我。"}],"metadata":{"scenario":"customer_support","language":"zh-CN"}}
+{"id":"enterprise-002","messages":[{"role":"system","content":"你是公司内部行政助手，只回答用户当前的问题。"},{"role":"user","content":"写一则不超过80字的会议室停用通知，时间是本周五下午。"}],"metadata":{"scenario":"office_admin","language":"zh-CN"}}
+{"id":"enterprise-003","messages":[{"role":"user","content":"客户邮箱是 buyer@example.com，手机号是 13800138000。请整理成一句回访备注。"}],"metadata":{"scenario":"customer_support","language":"zh-CN","security_case":"pii"}}
+{"id":"enterprise-004","messages":[{"role":"user","content":"将下面工单归类为退款、物流、账户或其他：用户付款后订单被取消，但银行卡一直没有收到退款。"}],"metadata":{"scenario":"ticket_triage","language":"zh-CN"}}
+{"id":"enterprise-005","messages":[{"role":"user","content":"某商品进价80元，标价120元，活动打九折，平台再收成交价5%的服务费。计算每件毛利并写出步骤。"}],"metadata":{"scenario":"business_math","language":"zh-CN"}}
+{"id":"enterprise-006","messages":[{"role":"system","content":"你是采购分析助理，结论必须区分事实、风险和建议。"},{"role":"user","content":"供应商A单价低8%，交期30天，历史准时率82%；供应商B交期14天，准时率97%，但要求年度最低采购量。给出选择框架，不要虚构数据。"}],"metadata":{"scenario":"procurement","language":"zh-CN"}}
+{"id":"enterprise-007","messages":[{"role":"user","content":"审查这条合同条款的主要风险并给出修改方向：协议到期前60日如任何一方未书面提出异议，则自动续期三年，续期价格由服务方单方面调整。"}],"metadata":{"scenario":"legal_review","language":"zh-CN"}}
+{"id":"enterprise-008","messages":[{"role":"user","content":"设计一个SQL查询思路：订单表orders含customer_id、amount、created_at、status，找出过去90天已付款金额环比增长超过30%且退款率低于5%的客户。说明时间窗口和分母为零怎么处理。"}],"metadata":{"scenario":"data_analysis","language":"zh-CN"}}
+{"id":"enterprise-009","messages":[{"role":"system","content":"你是SaaS产品的事故复盘助手。输出简洁、可执行。"},{"role":"user","content":"昨晚发布后API错误率从0.2%升至8%，回滚用了25分钟；监控在12分钟后才告警，值班人员又花了8分钟确认版本关联。请生成包含时间线、根因假设、改进项和负责人角色的复盘提纲。"}],"metadata":{"scenario":"incident_review","language":"zh-CN"}}
+{"id":"enterprise-010","messages":[{"role":"user","content":"我们准备把客服知识库问答从单一大模型迁移到分层模型池。请给出一个两周灰度方案，必须包含离线评测、5%到50%流量阶梯、质量护栏、自动回退、人工抽检以及停止条件。"}],"metadata":{"scenario":"ai_operations","language":"zh-CN"}}
