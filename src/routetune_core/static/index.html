@@ -17,11 +17,11 @@
         <button class="nav-item" data-page="playground"><span>▷</span>Playground</button>
         <button class="nav-item" data-page="api"><span>↗</span>API 接入</button>
       </div>
-      <div class="nav-section"><span class="nav-label">路由优化</span>
-        <button class="nav-item" data-page="batches"><span>▦</span>数据批次</button>
-        <button class="nav-item" data-page="reviews"><span>✓</span>批次审阅</button>
+      <div class="nav-section"><span class="nav-label">Router 优化</span>
         <button class="nav-item" data-page="models"><span>◇</span>模型池</button>
-        <button class="nav-item" data-page="releases"><span>◆</span>版本发布</button>
+        <button class="nav-item" data-page="batches"><span>▦</span>路由数据</button>
+        <button class="nav-item" data-page="reviews"><span>✓</span>人工标注</button>
+        <button class="nav-item" data-page="releases"><span>◆</span>Router 版本</button>
       </div>
       <div class="nav-section"><span class="nav-label">系统</span>
         <button class="nav-item" data-page="security"><span>◈</span>安全策略</button>
@@ -70,10 +70,10 @@
     <section id="page-releases" class="page">
       <div class="two-columns release-summary">
         <article class="panel"><div class="panel-title"><div><h2>Production</h2><p class="muted">统一 API 当前只使用这个不可变版本。</p></div><span class="pill">ACTIVE</span></div><dl class="facts"><div><dt>Release</dt><dd id="deployment-release" class="mono">—</dd></div><div><dt>Router Bundle</dt><dd id="deployment-bundle">—</dd></div><div><dt>发布时间</dt><dd id="deployment-time">—</dd></div><div><dt>更新方式</dt><dd>原子切换 · 可回滚</dd></div></dl></article>
-        <article class="panel"><div class="panel-title"><div><h2>当前配置草稿</h2><p class="muted">模型池和安全策略的修改不会直接影响生产。</p></div></div><p>这里只快照当前 Router 与配置，不会训练新 Router。训练结果由“数据与实验”生成。</p><label class="release-notes">版本说明<textarea id="release-notes" rows="3" placeholder="例如：调整 tier_2 模型并加入项目词典"></textarea></label><button id="create-release-button" class="button primary">生成配置候选版本</button></article>
+        <article class="panel"><div class="panel-title"><div><h2>当前配置草稿</h2><p class="muted">模型池和安全策略的修改不会直接影响生产。</p></div></div><p>这里只快照当前 Router 与配置，不会训练新 Router。训练产物由“人工标注”流程生成。</p><label class="release-notes">版本说明<textarea id="release-notes" rows="3" placeholder="例如：调整 tier_2 模型并加入项目词典"></textarea></label><button id="create-release-button" class="button primary">生成配置候选版本</button></article>
       </div>
       <article id="trained-release-notice" class="panel trained-release-notice hidden"></article>
-      <article class="panel"><div class="panel-title"><div><h2>版本历史</h2><p class="muted">候选版本发布后生效；重新发布历史版本即完成回滚。</p></div></div><div class="list-toolbar"><input id="release-search" type="search" placeholder="搜索 Release、Bundle 或批次"><select id="release-filter"><option value="">全部状态</option><option value="candidate">候选</option><option value="published">生产中</option><option value="superseded">历史版本</option></select><label>每页<select data-list-size="releases"><option>10</option><option>20</option><option>50</option></select></label></div><div id="release-table"></div><div id="release-pager" class="list-pager"></div></article>
+      <article class="panel"><div class="panel-title"><div><h2>Router 版本历史</h2><p class="muted">候选版本发布后生效；重新发布历史版本即完成回滚。</p></div></div><div class="list-toolbar"><input id="release-search" type="search" placeholder="搜索版本、Bundle 或来源批次"><select id="release-filter"><option value="">全部状态</option><option value="candidate">候选</option><option value="published">生产中</option><option value="superseded">历史版本</option></select><label>每页<select data-list-size="releases"><option>10</option><option>20</option><option>50</option></select></label></div><div id="release-table"></div><div id="release-pager" class="list-pager"></div></article>
     </section>
 
     <section id="page-playground" class="page">
@@ -152,19 +152,19 @@
         </article>
         <article class="panel"><div class="panel-title"><div><h2 id="batch-help-title">训练 Router</h2></div></div><div id="batch-mode-help"></div></article>
       </div>
-      <article class="panel"><div class="panel-title"><h2>批次列表</h2><button id="refresh-batches" class="text-button">刷新</button></div><div class="list-toolbar"><input id="batch-search" type="search" placeholder="搜索批次名称或 ID"><select id="batch-filter"><option value="">全部状态</option><option value="ready">待开始</option><option value="queued">排队中</option><option value="running">执行中</option><option value="completed">已完成</option><option value="failed">失败</option></select><label>每页<select data-list-size="batches"><option>10</option><option>20</option><option>50</option></select></label></div><div id="batch-table"></div><div id="batch-pager" class="list-pager"></div></article>
+      <article class="panel"><div class="panel-title"><h2>数据批次</h2><button id="refresh-batches" class="text-button">刷新</button></div><div class="list-toolbar"><input id="batch-search" type="search" placeholder="搜索批次名称或 ID"><select id="batch-filter"><option value="">全部状态</option><option value="ready">待开始</option><option value="queued">排队中</option><option value="running">执行中</option><option value="completed">已完成</option><option value="failed">失败</option></select><label>每页<select data-list-size="batches"><option>10</option><option>20</option><option>50</option></select></label></div><div id="batch-table"></div><div id="batch-pager" class="list-pager"></div></article>
     </section>
 
     <section id="page-reviews" class="page">
       <div class="review-summary-grid">
-        <article class="metric"><span>可审阅批次</span><strong id="review-batch-total">—</strong><small>已开始执行的批次</small></article>
+        <article class="metric"><span>标注任务</span><strong id="review-batch-total">—</strong><small>已生成候选输出</small></article>
         <article class="metric"><span>待标注输出</span><strong id="review-output-pending">—</strong><small>成功返回但尚未判断</small></article>
         <article class="metric"><span>已标注输出</span><strong id="review-output-done">—</strong><small>Pass / Fail 均计入</small></article>
         <article class="metric"><span>可训练批次</span><strong id="review-train-ready">—</strong><small>标注已满足训练条件</small></article>
       </div>
       <article class="panel review-batch-panel">
-        <div class="panel-title"><div><h2>选择一个批次开始审阅</h2><p class="muted">批次是工作单元；进入批次后再逐题、逐模型标注。</p></div><button class="text-button" data-go="batches">导入新批次 →</button></div>
-        <div class="list-toolbar"><input id="review-search" type="search" placeholder="搜索批次名称或 ID"><select id="review-filter"><option value="">全部可审阅批次</option><option value="pending">待审阅</option><option value="in_progress">审阅中</option><option value="train_ready">可训练</option><option value="done">已完成标注</option></select><label>每页<select data-list-size="reviews"><option>10</option><option>20</option><option>50</option></select></label></div>
+        <div class="panel-title"><div><h2>选择一组数据开始标注</h2><p class="muted">每个数据批次是一个标注任务；进入后逐题、逐模型判断 Pass / Fail。</p></div><button class="text-button" data-go="batches">导入路由数据 →</button></div>
+        <div class="list-toolbar"><input id="review-search" type="search" placeholder="搜索批次名称或 ID"><select id="review-filter"><option value="">全部标注任务</option><option value="pending">待标注</option><option value="in_progress">标注中</option><option value="train_ready">可训练</option><option value="done">已完成标注</option></select><label>每页<select data-list-size="reviews"><option>10</option><option>20</option><option>50</option></select></label></div>
         <div id="review-batch-table"></div>
         <div id="review-pager" class="list-pager"></div>
       </article>
@@ -174,10 +174,10 @@
   <dialog id="trace-dialog"><div class="dialog-head"><div><span class="eyebrow">TRACE DETAIL</span><h2 id="dialog-title">请求详情</h2></div><button class="icon-button" id="close-dialog">×</button></div><div id="dialog-body"></div></dialog>
   <dialog id="token-dialog"><form method="dialog"><div class="dialog-head"><h2>连接设置</h2><button class="icon-button" value="cancel">×</button></div><p class="muted">如果服务设置了 <code>ROUTETUNE_API_KEY</code>，请在此输入。密钥只保存在当前浏览器会话。</p><label for="token-input">API Key</label><input id="token-input" type="password" autocomplete="off" placeholder="留空表示未启用鉴权"><div class="dialog-actions"><button value="cancel" class="button ghost">取消</button><button id="save-token" value="default" class="button primary">保存</button></div></form></dialog>
   <dialog id="model-dialog"><form id="model-form"><div class="dialog-head"><div><span class="eyebrow">MODEL POOL</span><h2 id="model-dialog-title">添加模型</h2></div><button class="icon-button" type="button" id="close-model-dialog">×</button></div><div class="form-grid"><label>Provider<select id="model-provider"><option value="openrouter">OpenRouter</option><option value="siliconflow">硅基流动</option><option value="deepseek">DeepSeek</option><option value="custom">Custom OpenAI-compatible</option></select></label><label>内部 Model ID<input id="model-id" required placeholder="openrouter-free-1"></label><div id="custom-provider-fields" class="form-grid nested wide hidden"><label>Provider ID<input id="custom-provider-id" placeholder="internal-litellm"></label><label>Base URL<input id="custom-base-url" placeholder="http://litellm.internal:4000/v1"></label><label>API Key 环境变量<input id="custom-key-env" placeholder="INTERNAL_LITELLM_API_KEY"></label><label class="check-label"><input id="custom-no-auth" type="checkbox"> 无需鉴权</label></div><label class="wide">Provider model slug<input id="api-model" required placeholder="例如 openai/gpt-oss-20b:free"></label><label>路由层级<select id="model-tier"><option value="tier_1">Tier 1 · 轻量</option><option value="tier_2">Tier 2 · 常规</option><option value="tier_3">Tier 3 · 标准</option><option value="tier_4">Tier 4 · 强力</option><option value="tier_5">Tier 5 · 专家</option></select></label><label>Cost rank<input id="cost-rank" type="number" min="1" value="10" required></label><label>能力标签<input id="model-tags" placeholder="free, general"></label><div class="wide"><span class="form-label">模型默认生成参数</span><p class="muted compact">按官方建议填写；请求或批次可覆盖。留空表示交给 Provider。</p><div class="request-options"><label>Max tokens<input id="model-max-tokens" type="number" min="1" value="1024" required></label><label>Temperature<input id="model-temperature" type="number" min="0" max="2" step="0.1" placeholder="Provider 默认"></label><label>Top P<input id="model-top-p" type="number" min="0" max="1" step="0.05" placeholder="Provider 默认"></label><label>Top K<input id="model-top-k" type="number" min="1" step="1" placeholder="Provider 默认"></label></div></div><label class="wide">Provider API Key（可选）<input id="provider-key" type="password" autocomplete="off" placeholder="仅注入当前服务进程，不会写入数据库"></label><label class="check-label"><input id="model-enabled" type="checkbox" checked> 启用模型</label></div><p id="model-env-hint" class="muted"></p><div class="dialog-actions"><button type="button" id="cancel-model" class="button ghost">取消</button><button type="submit" class="button primary">保存模型</button></div></form></dialog>
-  <dialog id="batch-dialog" class="batch-dialog"><div class="dialog-head"><div><span class="eyebrow">ROUTER TRAINING</span><h2 id="batch-dialog-title">批次工作台</h2></div><button class="icon-button" id="close-batch-dialog">×</button></div><div id="batch-dialog-body"></div></dialog>
+  <dialog id="batch-dialog" class="batch-dialog"><div class="dialog-head"><div><span class="eyebrow">ROUTER TRAINING</span><h2 id="batch-dialog-title">路由数据工作台</h2></div><button class="icon-button" id="close-batch-dialog">×</button></div><div id="batch-dialog-body"></div></dialog>
   <dialog id="router-training-dialog"><form id="router-training-form"><div class="dialog-head"><div><span class="eyebrow">PROBABILISTIC CLASSIFIER</span><h2>选择 Router 训练方案</h2></div><button class="icon-button" type="button" id="close-router-training">×</button></div><p class="muted">训练器接收请求文本，输出固定路由标签的概率分布；低置信度或分布外请求按策略回退。</p><div id="router-trainer-options" class="trainer-options"></div><div class="dialog-actions"><button type="button" class="button ghost" id="cancel-router-training">取消</button><button type="submit" class="button primary" id="confirm-router-training">开始训练</button></div></form></dialog>
   <dialog id="training-result-dialog"><div class="dialog-head"><div><span class="eyebrow">TRAINING COMPLETE</span><h2>Router 训练完成</h2></div><button class="icon-button" id="close-training-result">×</button></div><div id="training-result-body"></div></dialog>
   <div id="toast" role="status"></div>
-  <script src="/assets/app.js?v=20261010-17"></script>
+  <script src="/assets/app.js?v=20261014-18"></script>
 </body>
 </html>

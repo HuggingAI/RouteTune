@@ -18,7 +18,7 @@
 - [ ] 将本地仓库连接到 `git@github.com:HuggingAI/RouteTune.git`
 - [ ] 检查初始 commit 中没有 `.env`、本地 TOML、数据库和 artifacts
 - [ ] 在正常 Docker Hub 网络下完成一次 `docker compose up --build`
-- [ ] 用公开样例数据截取大盘、统一审阅、版本发布三张图
+- [ ] 用公开样例数据截取运行大盘、人工标注、Router 版本三张图
 - [ ] 在 GitHub 设置 Description、Topics 和 Social preview
 - [ ] 启用 GitHub Discussions 与 Private vulnerability reporting
 - [ ] 推送 `main`，确认 CI 全绿

@@ -42,16 +42,16 @@ CUAD 的合同条款识别也适合企业场景，但单份合同输入更长、
 }
 ```
 
-Ground Truth 只位于 metadata。RouteTune 调用候选模型时只发送 messages；批次审阅页会在候选输出上方直接展示 GT 和判定类型。没有 GT 的真实业务样本仍可上传，由用户按业务标准人工判断。
+Ground Truth 只位于 metadata。RouteTune 调用候选模型时只发送 messages；“人工标注”页会在候选输出上方直接展示 GT 和判定类型。没有 GT 的真实业务样本仍可上传，由用户按业务标准人工判断。
 
 ## 3. 推荐完整流程
 
-1. 在“数据与实验”选择“训练对比模式”。
+1. 在“路由数据”导入 JSONL 并选择候选模型。
 2. 直接勾选 3 个真实模型，建议分别覆盖 `tier_1`、`tier_2`、`tier_3`。
 3. 上传 12 条 smoke。页面默认使用 `max_tokens=512`、`temperature=0`；页面参数覆盖 JSONL，留空时依次使用 JSONL 单条值、模型池默认值和 Provider 默认值。
 4. 执行批次。12 条 × 3 个模型 = 36 次串行请求，适合免费 API 的低并发限制。
 5. 展开每条参考答案，对各模型输出做 Pass/Fail 标注。意图分类要求标签精确匹配；FinQA 以最终数值为准，允许表述差异。
-6. 完整标注后训练候选 Bundle，在版本发布页确认 Router、模型池和安全快照，再人工发布。
+6. 完整标注后训练候选 Bundle，在“Router 版本”页确认 Router、模型池和安全快照，再人工发布。
 7. 用 Playground 调用统一 `/v1/chat/completions`，查看 Release、路由标签、实际模型和 Trace。
 8. smoke 无工程错误后，再上传 30 条完整集；30 条 × 3 个模型 = 90 次调用。
 

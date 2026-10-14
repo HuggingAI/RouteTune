@@ -34,9 +34,9 @@ llm-routing, model-router, llm-gateway, openai-compatible, llmops, machine-learn
 它不让另一个 LLM 决定“该调用哪个 LLM”，也不依赖一套通用 benchmark。你导入自己的请求，运行多个候选模型，标注哪些输出可接受，RouteTune 再训练一个轻量概率分类器，把新请求路由到刚好够用的模型层级。
 
 整个流程是一条闭环：
-请求导入 → 候选对比 → 人工审阅 → Router 训练 → 版本发布 → 统一 API → Trace 回流。
+路由数据 → 候选对比 → 人工标注 → Router 训练 → Router 版本 → 统一 API → Trace 回流。
 
-首个开源版本包含模型池、双向安全脱敏、批次运行、统一审阅、版本发布、调用大盘和 OpenAI-compatible API。控制面、Router、Trace 和标注数据可以留在自己的基础设施里；接内部 LiteLLM 或私有模型时，完整调用链都可以运行在内网。
+首个开源版本包含模型池、双向安全脱敏、路由数据、人工标注、Router 版本、调用大盘和 OpenAI-compatible API。控制面、Router、Trace 和标注数据可以留在自己的基础设施里；接内部 LiteLLM 或私有模型时，完整调用链都可以运行在内网。
 
 Docker Compose 可以零 Key 启动，本地 Mock 模型能直接跑完整流程。Provider Key 只通过环境变量注入，不进入模型配置、Release 或 Trace。
 
