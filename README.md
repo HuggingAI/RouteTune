@@ -188,6 +188,7 @@ RouteTune 的核心特色只有一个：
 - [一页产品定义](docs/PRODUCT_ONE_PAGER.md)
 - [核心技术与产品架构](docs/ARCHITECTURE.md)
 - [部署指南](docs/DEPLOYMENT.md)
+- [稳定演示与发布验收](docs/DEMO_RUNBOOK.md)
 - [Engine 数据契约](docs/ENGINE_CONTRACT.md)
 - [版本发布与扩缩容架构](docs/RELEASE_ARCHITECTURE.md)
 - [企业试跑数据集](docs/ENTERPRISE_PILOT_DATASETS.md)

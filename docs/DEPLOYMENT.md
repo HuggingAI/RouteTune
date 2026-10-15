@@ -17,6 +17,19 @@ Compose 会启动：
 - `routetune-data`：SQLite 数据；
 - `routetune-artifacts`：冷启动与训练产生的 Router 制品。
 
+这里的双容器是零 Key 演示拓扑，不是 RouteTune 的强制部署架构：`routetune` 是唯一的
+产品服务，`mock-provider` 只是一个独立的 OpenAI-compatible 测试 Provider。生产环境可
+只运行 `routetune`，并在自己的 Compose/Kubernetes 配置中移除 `mock-provider` 及其
+`depends_on`，连接真实云模型或内部 LiteLLM，同时从模型池停用三个 Mock 模型。
+
+容器运行依赖由仓库中的 `requirements.lock` 固定，并使用哈希校验安装；该文件由
+`uv.lock` 导出。更新 Python 依赖时必须同时更新并提交两份锁文件：
+
+```bash
+uv lock
+uv export --frozen --no-dev --no-emit-project --output-file requirements.lock
+```
+
 首次启动时，容器自动创建 `tier_1`～`tier_5` 冷启动 Bundle。默认配置在回退层 `tier_5` 提供 `mock-strong`，所以不需要外部 Key 也能调用。发布版本同时包含真实模型与 Demo Mock 时，已配置凭据的真实 Provider 优先，Mock 只作为最后兜底；健康接口的 `provider_mode` 与 `routing_targets` 会显示当前实际首选。
 
 ## Key 配置

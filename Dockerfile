@@ -1,16 +1,22 @@
 FROM python:3.11-slim
 
+ARG PIP_INDEX_URL
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app/src
 
 WORKDIR /app
 
 RUN groupadd --system routetune \
     && useradd --system --gid routetune --home-dir /app routetune
 
+COPY requirements.lock ./
+RUN --mount=type=cache,target=/root/.cache/pip \
+    python -m pip install --require-hashes -r requirements.lock
+
 COPY pyproject.toml README.md LICENSE ./
 COPY src ./src
-RUN python -m pip install --no-cache-dir .
 
 COPY configs ./configs
 COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
