@@ -91,6 +91,7 @@ class RouteTuneRuntime:
         allow_provider_fallback: bool = True,
         generation_options: GenerationOptions | None = None,
         trace_source: str = "api",
+        trace_metadata: dict[str, str] | None = None,
     ) -> RuntimeResponse:
         _validate_single_turn(messages)
 
@@ -111,6 +112,7 @@ class RouteTuneRuntime:
                 deployment_id=self.deployment_id,
                 release_id=self.release_id,
                 request_source=trace_source,
+                metadata=trace_metadata,
             )
             self.traces.fail(trace_id, _safe_error_code(error))
             raise RuntimeExecutionFailed(
@@ -129,6 +131,7 @@ class RouteTuneRuntime:
             deployment_id=self.deployment_id,
             release_id=self.release_id,
             request_source=trace_source,
+            metadata=trace_metadata,
         )
 
         blocked = self.security.blocked_types(

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>RouteTune Console</title>
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/app.css?v=20261010-8">
+  <link rel="stylesheet" href="/assets/app.css?v=20261020-1">
 </head>
 <body>
   <aside class="sidebar">
@@ -61,6 +61,7 @@
         <article class="panel"><div class="panel-title"><div><h2>失败情况</h2><p class="muted">Provider、安全与运行时错误</p></div><button class="text-button" data-go="traces">查看请求 →</button></div><div id="error-bars" class="bars empty">暂无失败请求</div></article>
       </div>
       <article class="panel"><div class="panel-title"><div><h2>模型运行表现</h2><p class="muted">用于观察模型分布、成功率、Token 和平均耗时，不参与人工打分。</p></div><button class="text-button" data-go="models">管理模型池 →</button></div><div id="model-performance"></div></article>
+      <article class="panel"><div class="panel-title"><div><h2>分组路由观察</h2><p class="muted">按调用方显式提供的业务分组比较资源分配与结果；仅用于发现差异，不自动判定或强制“公平”。</p></div><span class="pill subtle">OBSERVATION ONLY</span></div><div id="fairness-observation"></div></article>
       <div class="dashboard-grid deployment-grid">
         <article class="panel"><div class="panel-title"><h2>Production Deployment</h2><button class="text-button" data-go="releases">管理发布 →</button></div><dl class="facts"><div><dt>活动 Release</dt><dd id="active-release">—</dd></div><div><dt>Engine Bundle</dt><dd id="bundle-version">—</dd></div><div><dt>路由模式</dt><dd id="route-mode">—</dd></div><div><dt>可用模型</dt><dd id="model-list">—</dd></div><div><dt>服务状态</dt><dd class="good">运行中</dd></div></dl></article>
         <article class="panel"><div class="panel-title"><h2>最近请求</h2><button class="text-button" data-go="traces">查看全部 →</button></div><div id="recent-table"></div></article>
@@ -85,6 +86,8 @@
           <label for="user-input">User message</label>
           <textarea id="user-input" rows="10" placeholder="输入请求。邮箱、手机号、证件号和密钥会在发往模型前脱敏。"></textarea>
           <div class="request-options"><label>Max tokens（可选）<input id="request-max-tokens" type="number" min="1" placeholder="使用模型默认值"></label><label>Temperature（可选）<input id="request-temperature" type="number" min="0" max="2" step="0.1" placeholder="使用模型默认值"></label><label>Top P（可选）<input id="request-top-p" type="number" min="0" max="1" step="0.05" placeholder="使用模型默认值"></label><label>Top K（可选）<input id="request-top-k" type="number" min="1" step="1" placeholder="使用模型默认值"></label></div>
+          <span class="form-label">分组观测字段（可选，由调用方明确提供）</span>
+          <div class="request-options"><label>语言<input id="request-language" maxlength="100" placeholder="例如 zh-CN"></label><label>业务场景<input id="request-scenario" maxlength="100" placeholder="例如 customer_support"></label><label>租户标识<input id="request-tenant" maxlength="100" placeholder="建议使用非敏感别名"></label><label>用户分组<input id="request-segment" maxlength="100" placeholder="例如 vip"></label></div>
           <div class="compose-foot"><span id="send-status" class="muted">请求会被自动路由</span><button id="send-button" class="button primary">发送请求</button></div>
         </article>
         <article class="panel result-panel">
@@ -103,7 +106,7 @@
       <div class="two-columns api-layout">
         <article class="panel">
           <div class="panel-title"><div><h2>统一外部 API</h2><p class="muted">业务系统与 Playground 都只调用这个入口。</p></div><span class="pill">OpenAI-compatible</span></div>
-          <dl class="facts"><div><dt>Endpoint</dt><dd id="public-api-endpoint" class="mono">—</dd></div><div><dt>Model</dt><dd><code>auto</code></dd></div><div><dt>协议</dt><dd>无状态单轮 messages</dd></div><div><dt>鉴权</dt><dd>可选 Bearer ROUTETUNE_API_KEY</dd></div></dl>
+          <dl class="facts"><div><dt>Endpoint</dt><dd id="public-api-endpoint" class="mono">—</dd></div><div><dt>Model</dt><dd><code>auto</code></dd></div><div><dt>协议</dt><dd>无状态单轮 messages</dd></div><div><dt>分组观测</dt><dd>可选 metadata：language / scenario / tenant / segment</dd></div><div><dt>鉴权</dt><dd>可选 Bearer ROUTETUNE_API_KEY</dd></div></dl>
           <p class="api-actions"><button id="copy-api-endpoint" class="button">复制 Endpoint</button><a class="button" href="/docs" target="_blank">打开 OpenAPI 文档 ↗</a></p>
         </article>
         <article class="panel">
@@ -178,6 +181,6 @@
   <dialog id="router-training-dialog"><form id="router-training-form"><div class="dialog-head"><div><span class="eyebrow">PROBABILISTIC CLASSIFIER</span><h2>选择 Router 训练方案</h2></div><button class="icon-button" type="button" id="close-router-training">×</button></div><p class="muted">训练器接收请求文本，输出固定路由标签的概率分布；低置信度或分布外请求按策略回退。</p><div id="router-trainer-options" class="trainer-options"></div><div class="dialog-actions"><button type="button" class="button ghost" id="cancel-router-training">取消</button><button type="submit" class="button primary" id="confirm-router-training">开始训练</button></div></form></dialog>
   <dialog id="training-result-dialog"><div class="dialog-head"><div><span class="eyebrow">TRAINING COMPLETE</span><h2>Router 训练完成</h2></div><button class="icon-button" id="close-training-result">×</button></div><div id="training-result-body"></div></dialog>
   <div id="toast" role="status"></div>
-  <script src="/assets/app.js?v=20261014-18"></script>
+  <script src="/assets/app.js?v=20261020-1"></script>
 </body>
 </html>

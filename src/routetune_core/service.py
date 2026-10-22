@@ -49,6 +49,16 @@ class MessageInput(BaseModel):
     content: str = Field(min_length=1, max_length=100_000)
 
 
+class RoutingMetadataInput(BaseModel):
+    """Caller-supplied dimensions used only for grouped operational reporting."""
+
+    model_config = ConfigDict(extra="forbid")
+    language: str | None = Field(default=None, min_length=1, max_length=100)
+    scenario: str | None = Field(default=None, min_length=1, max_length=100)
+    tenant: str | None = Field(default=None, min_length=1, max_length=100)
+    segment: str | None = Field(default=None, min_length=1, max_length=100)
+
+
 class CompletionInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     model: str = "auto"
@@ -59,6 +69,7 @@ class CompletionInput(BaseModel):
     top_p: float | None = Field(default=None, ge=0, le=1)
     top_k: int | None = Field(default=None, ge=1, le=1_000_000)
     request_id: str | None = Field(default=None, min_length=1, max_length=200)
+    metadata: RoutingMetadataInput | None = None
 
     @model_validator(mode="after")
     def validate_single_turn(self) -> CompletionInput:
@@ -315,6 +326,9 @@ def create_app(
             result = (deployments or runtime).complete(
                 [ChatMessage(role=item.role, content=item.content) for item in payload.messages],
                 request_id=payload.request_id,
+                trace_metadata=(
+                    payload.metadata.model_dump(exclude_none=True) if payload.metadata else None
+                ),
                 generation_options=(
                     GenerationOptions(
                         max_tokens=payload.max_tokens,

@@ -610,6 +610,12 @@ class BatchManager:
                 allow_provider_fallback=not compare,
                 generation_options=generation_options,
                 trace_source="batch",
+                trace_metadata={
+                    key: str(value)
+                    for key, value in (item.get("metadata") or {}).items()
+                    if key in {"language", "scenario", "tenant", "segment"}
+                    and value is not None
+                },
             )
         except Exception as error:
             trace_id = getattr(error, "trace_id", None)

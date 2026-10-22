@@ -59,6 +59,7 @@ flowchart LR
 - 用 Auto 或 TF-IDF + Logistic Regression 训练概率分类 Router；
 - 创建不可变候选版本，人工发布或回滚生产版本；
 - 查看模型分布、成功率、延迟、Input/Output Token 和完整 Trace；
+- 按调用方提供的语言、场景、租户或用户分组观察路由层级、回退率和人工 Pass 率差异；
 - 在出站和返回阶段执行正则、词典及可选 spaCy 实体脱敏。
 
 ## 私有化部署与安全可控
@@ -97,7 +98,7 @@ docker compose up --build -d
 ```bash
 curl http://127.0.0.1:8787/v1/chat/completions \
   -H 'Content-Type: application/json' \
-  -d '{"model":"auto","messages":[{"role":"user","content":"请总结这份退款申请"}],"max_tokens":256}'
+  -d '{"model":"auto","messages":[{"role":"user","content":"请总结这份退款申请"}],"metadata":{"language":"zh-CN","scenario":"customer_support"},"max_tokens":256}'
 ```
 
 停止服务：
@@ -118,6 +119,13 @@ model: auto
 ```
 
 Playground 使用的也是这条统一 API，不存在只在后台才能运行的旁路逻辑。
+
+请求可选携带 `metadata.language`、`metadata.scenario`、`metadata.tenant` 和
+`metadata.segment`。这些字段由业务调用方或批次 JSONL 明确提供，只用于 Trace
+分组统计：RouteTune 不自动猜测用户属性，也不会据此强制各组获得相同模型配额。
+建议使用稳定、低基数且不含个人信息的值（例如租户别名而非客户姓名）。运行大盘会展示
+字段覆盖率、各组层级分配、成功率、回退率、延迟和人工 Pass 率；观察到差异并不等同于
+得出公平性结论。
 
 ## 配置真实模型 Key
 

@@ -12,6 +12,7 @@ from routetune_core.contracts import Annotation
 from routetune_core.security import SensitiveFinding
 
 StorageMode = Literal["metadata_only", "redacted"]
+ROUTING_GROUP_DIMENSIONS = ("language", "scenario", "tenant", "segment")
 
 
 def _now() -> str:
@@ -69,7 +70,8 @@ class TraceStore:
                     error_code TEXT,
                     deployment_id TEXT,
                     release_id TEXT,
-                    request_source TEXT NOT NULL DEFAULT 'api'
+                    request_source TEXT NOT NULL DEFAULT 'api',
+                    metadata_json TEXT NOT NULL DEFAULT '{}'
                 );
                 CREATE INDEX IF NOT EXISTS traces_created_at_idx ON traces(created_at DESC);
 
@@ -106,6 +108,10 @@ class TraceStore:
                     "WHERE decision_json LIKE '%BATCH_COMPARE_MODEL%' "
                     "OR decision_json LIKE '%BATCH_ROUTED_MODEL%'"
                 )
+            if "metadata_json" not in columns:
+                connection.execute(
+                    "ALTER TABLE traces ADD COLUMN metadata_json TEXT NOT NULL DEFAULT '{}'"
+                )
 
     def start(
         self,
@@ -117,6 +123,7 @@ class TraceStore:
         deployment_id: str | None = None,
         release_id: str | None = None,
         request_source: str = "api",
+        metadata: dict[str, str] | None = None,
     ) -> str:
         if request_source not in {"api", "batch"}:
             raise ValueError("request_source must be api or batch")
@@ -127,8 +134,9 @@ class TraceStore:
                 """
                 INSERT INTO traces(
                     trace_id, request_id, created_at, status, input_hash, input_text,
-                    input_findings_json, deployment_id, release_id, request_source
-                ) VALUES (?, ?, ?, 'started', ?, ?, ?, ?, ?, ?)
+                    input_findings_json, deployment_id, release_id, request_source,
+                    metadata_json
+                ) VALUES (?, ?, ?, 'started', ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     trace_id,
@@ -140,6 +148,11 @@ class TraceStore:
                     deployment_id,
                     release_id,
                     request_source,
+                    json.dumps(
+                        _normalize_routing_metadata(metadata),
+                        ensure_ascii=False,
+                        separators=(",", ":"),
+                    ),
                 ),
             )
         return trace_id
@@ -408,6 +421,18 @@ class TraceStore:
                 """,
                 params,
             ).fetchone()
+            fairness_traces = connection.execute(
+                f"""
+                SELECT trace_id, status, selected_route_label, fallback_reason,
+                       decision_json, latency_ms, prompt_tokens, completion_tokens,
+                       metadata_json
+                FROM traces {where}
+                """,
+                params,
+            ).fetchall()
+            fairness_annotations = connection.execute(
+                "SELECT trace_id, passed FROM annotations ORDER BY created_at"
+            ).fetchall()
         latencies = sorted(float(item["latency_ms"]) for item in latency_rows)
         annotation_total = int(labels["total"] or 0)
         passed = int(labels["passed"] or 0)
@@ -452,6 +477,7 @@ class TraceStore:
                 "passed": passed,
                 "pass_rate": passed / annotation_total if annotation_total else None,
             },
+            "fairness": _fairness_stats(fairness_traces, fairness_annotations),
         }
 
 
@@ -472,9 +498,164 @@ def _json_or_none(value: object) -> object:
     return json.loads(value) if isinstance(value, str) else None
 
 
+def _normalize_routing_metadata(metadata: dict[str, str] | None) -> dict[str, str]:
+    if not metadata:
+        return {}
+    normalized: dict[str, str] = {}
+    for key in ROUTING_GROUP_DIMENSIONS:
+        value = metadata.get(key)
+        if value is None:
+            continue
+        text = str(value).strip()
+        if text:
+            normalized[key] = text[:100]
+    return normalized
+
+
+def _fairness_stats(
+    traces: list[sqlite3.Row], annotations: list[sqlite3.Row]
+) -> dict[str, Any]:
+    latest_annotations = {str(item["trace_id"]): bool(item["passed"]) for item in annotations}
+    coverage = {key: 0 for key in ROUTING_GROUP_DIMENSIONS}
+    grouped: dict[tuple[str, str], dict[str, Any]] = {}
+    for trace in traces:
+        metadata = _json_or_none(trace["metadata_json"])
+        if not isinstance(metadata, dict):
+            continue
+        decision = _json_or_none(trace["decision_json"])
+        fallback = bool(trace["fallback_reason"]) or (
+            isinstance(decision, dict) and bool(decision.get("used_fallback"))
+        )
+        trace_id = str(trace["trace_id"])
+        for dimension in ROUTING_GROUP_DIMENSIONS:
+            raw_value = metadata.get(dimension)
+            if not isinstance(raw_value, str) or not raw_value.strip():
+                continue
+            value = raw_value.strip()
+            coverage[dimension] += 1
+            bucket = grouped.setdefault(
+                (dimension, value),
+                {
+                    "dimension": dimension,
+                    "value": value,
+                    "requests": 0,
+                    "completed": 0,
+                    "failed": 0,
+                    "fallbacks": 0,
+                    "latencies": [],
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "annotations": 0,
+                    "passed": 0,
+                    "route_counts": {},
+                },
+            )
+            bucket["requests"] += 1
+            completed = trace["status"] == "completed"
+            bucket["completed"] += int(completed)
+            bucket["failed"] += int(trace["status"] in {"failed", "blocked"})
+            bucket["fallbacks"] += int(fallback)
+            if completed and trace["latency_ms"] is not None:
+                bucket["latencies"].append(float(trace["latency_ms"]))
+            bucket["prompt_tokens"] += int(trace["prompt_tokens"] or 0)
+            bucket["completion_tokens"] += int(trace["completion_tokens"] or 0)
+            if trace_id in latest_annotations:
+                bucket["annotations"] += 1
+                bucket["passed"] += int(latest_annotations[trace_id])
+            route_label = str(trace["selected_route_label"] or "unassigned")
+            bucket["route_counts"][route_label] = bucket["route_counts"].get(route_label, 0) + 1
+
+    groups: list[dict[str, Any]] = []
+    for bucket in grouped.values():
+        requests = int(bucket["requests"])
+        annotation_count = int(bucket["annotations"])
+        latencies = bucket.pop("latencies")
+        route_counts = bucket.pop("route_counts")
+        groups.append(
+            {
+                **bucket,
+                "success_rate": bucket["completed"] / requests if requests else None,
+                "fallback_rate": bucket["fallbacks"] / requests if requests else None,
+                "average_latency_ms": sum(latencies) / len(latencies) if latencies else None,
+                "pass_rate": bucket["passed"] / annotation_count if annotation_count else None,
+                "route_labels": [
+                    {
+                        "route_label": label,
+                        "requests": count,
+                        "share": count / requests,
+                    }
+                    for label, count in sorted(route_counts.items())
+                ],
+            }
+        )
+    groups.sort(key=lambda item: (item["dimension"], -item["requests"], item["value"]))
+
+    allocation_gaps: list[dict[str, Any]] = []
+    for dimension in ROUTING_GROUP_DIMENSIONS:
+        dimension_groups = [item for item in groups if item["dimension"] == dimension]
+        if len(dimension_groups) < 2:
+            continue
+        labels = sorted(
+            {
+                route["route_label"]
+                for item in dimension_groups
+                for route in item["route_labels"]
+            }
+        )
+        for label in labels:
+            shares = [
+                (
+                    item["value"],
+                    next(
+                        (
+                            route["share"]
+                            for route in item["route_labels"]
+                            if route["route_label"] == label
+                        ),
+                        0.0,
+                    ),
+                )
+                for item in dimension_groups
+            ]
+            minimum = min(shares, key=lambda item: item[1])
+            maximum = max(shares, key=lambda item: item[1])
+            allocation_gaps.append(
+                {
+                    "dimension": dimension,
+                    "route_label": label,
+                    "min_group": minimum[0],
+                    "min_share": minimum[1],
+                    "max_group": maximum[0],
+                    "max_share": maximum[1],
+                    "gap": maximum[1] - minimum[1],
+                }
+            )
+    allocation_gaps.sort(key=lambda item: item["gap"], reverse=True)
+    total = len(traces)
+    return {
+        "mode": "observation_only",
+        "dimensions": list(ROUTING_GROUP_DIMENSIONS),
+        "coverage": [
+            {
+                "dimension": dimension,
+                "tagged_requests": coverage[dimension],
+                "coverage_rate": coverage[dimension] / total if total else None,
+            }
+            for dimension in ROUTING_GROUP_DIMENSIONS
+        ],
+        "groups": groups,
+        "allocation_gaps": allocation_gaps,
+    }
+
+
 def _trace_dict(row: sqlite3.Row) -> dict[str, Any]:
     result = dict(row)
-    for key in ("input_findings_json", "output_findings_json", "decision_json"):
+    for key in (
+        "input_findings_json",
+        "output_findings_json",
+        "decision_json",
+        "metadata_json",
+    ):
         result[key.removesuffix("_json")] = _json_or_none(result.pop(key))
     return result
 

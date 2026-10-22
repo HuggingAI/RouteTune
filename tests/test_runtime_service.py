@@ -88,6 +88,12 @@ def test_http_request_is_redacted_routed_traced_and_annotated(tmp_path: Path) ->
         json={
             "model": "auto",
             "messages": [{"role": "user", "content": "联系我 13800138000"}],
+            "metadata": {
+                "language": "zh-CN",
+                "scenario": "customer_support",
+                "tenant": "tenant-demo",
+                "segment": "vip",
+            },
         },
     )
 
@@ -102,6 +108,12 @@ def test_http_request_is_redacted_routed_traced_and_annotated(tmp_path: Path) ->
     assert "13800138000" not in trace["input_text"]
     assert trace["status"] == "completed"
     assert trace["input_findings"][0]["entity_type"] == "PHONE"
+    assert trace["metadata"] == {
+        "language": "zh-CN",
+        "scenario": "customer_support",
+        "tenant": "tenant-demo",
+        "segment": "vip",
+    }
 
     annotation = client.post(
         f"/v1/traces/{trace_id}/annotations",
@@ -127,6 +139,17 @@ def test_http_request_is_redacted_routed_traced_and_annotated(tmp_path: Path) ->
     assert stats["models"][0]["completed"] == 1
     assert stats["timeline"][0]["requests"] == 1
     assert stats["request_source"] == "api"
+    language_group = next(
+        item
+        for item in stats["fairness"]["groups"]
+        if item["dimension"] == "language" and item["value"] == "zh-CN"
+    )
+    assert stats["fairness"]["mode"] == "observation_only"
+    assert language_group["requests"] == 1
+    assert language_group["pass_rate"] == 1.0
+    assert language_group["route_labels"] == [
+        {"route_label": "unassigned", "requests": 1, "share": 1.0}
+    ]
     assert client.get("/v1/stats?window=24h&source=all").json()["requests"]["total"] == 2
     assert client.get("/v1/stats?window=invalid").status_code == 422
 
@@ -210,6 +233,21 @@ def test_api_rejects_multi_turn_messages(tmp_path: Path) -> None:
 
     assert response.status_code == 422
     assert adapter.calls == []
+
+
+def test_api_rejects_unknown_routing_metadata(tmp_path: Path) -> None:
+    runtime, store = _runtime(tmp_path, FakeAdapter())
+    client = TestClient(create_app(runtime, store))
+
+    response = client.post(
+        "/v1/chat/completions",
+        json={
+            "messages": [{"role": "user", "content": "hello"}],
+            "metadata": {"language": "zh-CN", "email": "person@example.com"},
+        },
+    )
+
+    assert response.status_code == 422
 
 
 def test_generation_options_belong_to_each_request(tmp_path: Path) -> None:
