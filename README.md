@@ -16,6 +16,7 @@
 <p>
   <a href="#3-分钟本地体验">快速体验</a> ·
   <a href="#产品闭环">产品闭环</a> ·
+  <a href="#研究结果">研究结果</a> ·
   <a href="#私有化部署与安全可控">私有化与安全</a> ·
   <a href="docs/DEPLOYMENT.md">部署文档</a>
 </p>
@@ -48,6 +49,21 @@ flowchart LR
 ```
 
 业务系统始终只面对一个 API。模型池、安全策略、训练数据和 Router Bundle 一起进入不可变 Release，因此每条线上决策都能还原“当时由哪个版本、以什么理由、调用了哪个模型”。
+
+## 研究结果
+
+我们在一份已提交、正在评审的研究工作中，用冻结的 LLMRouterBench 测试集评估了轻量非生成式 Router：共 2,402 条测试请求、11 个当代模型和 9 个任务完成数据集。实验只用 validation 选择工作点，并在 5 个随机种子上分别报告任务族与数据集结果。
+
+| 工作负载 | 方法 | 相对强固定模型的成本节省 | Acceptance 变化 | 结论 |
+|---|---|---:|---:|---|
+| Code / software | TF-IDF per-model | 25.0% | +1.95 pp | 5 个种子无任务族或数据集级违规 |
+| Code / software | MiniLM per-model | 23.6% | +0.68 pp | 5 个种子无任务族或数据集级违规 |
+| Closed knowledge | MiniLM per-model | 3.09% | -0.16 pp | 唯一取得正节省且无违规的 learned 结果 |
+| Factual open QA / SimpleQA | Avengers-P adaptation | 80.4% | +2.03 pp | 但最便宜固定模型节省 99.5%，因此主要机会是静态选型 |
+
+结果也说明，Router 并不是在所有任务上都应该积极分流：Code / software 的收益全部来自 LiveCodeBench，而两种方法在 SWE-bench 上都选择 100% fallback；当前 Math 与 Tool 样本也不足以支持正面的路由结论。项目因此坚持按业务数据、任务类型和模型池验证，而不宣传一个脱离场景的“总体节省率”。
+
+> 这些数字来自冻结 benchmark 的离线对比，不代表客户生产环境收益。成本采用数据集记录的比较口径，不是当前供应商价格；论文公开后将在此补充正式链接、完整协议和可复现实验材料。
 
 ## 现在可以做什么
 
