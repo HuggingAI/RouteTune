@@ -25,6 +25,8 @@
 
 RouteTune 是一个开源、自托管的 LLM 路由闭环。它不依赖 LLM 再判断该调用哪个 LLM，也不要求你相信一套通用 benchmark：用自己的请求、候选模型真实输出和人工 `pass / fail` 反馈，训练并发布轻量概率分类 Router。
 
+> **项目进展（2026-10）**：RouteTune 已在一家客户企业实际部署使用。配套研究论文 *When Is LLM Routing Worth It?* 已提交 NAACL 2027 Industry Track，当前处于评审阶段；客户名称、业务请求和经营数据不公开。
+
 | 真实反馈驱动 | 私有化部署 | 安全可控 | 受控发布 |
 |---|---|---|---|
 | 用你的业务请求和人工判断训练，不被公共榜单定义 | 控制面、Router、Trace 与数据可部署在自己的基础设施 | 出站与返回双向脱敏，Key 不进入配置、Release 或 Trace | 草稿修改不影响生产，人工发布不可变版本并支持回滚 |
@@ -52,7 +54,7 @@ flowchart LR
 
 ## 研究结果
 
-我们在一份已提交、正在评审的研究工作中，用冻结的 LLMRouterBench 测试集评估了轻量非生成式 Router：共 2,402 条测试请求、11 个当代模型和 9 个任务完成数据集。实验只用 validation 选择工作点，并在 5 个随机种子上分别报告任务族与数据集结果。
+我们在已提交 NAACL 2027 Industry Track、正在评审的研究工作 *When Is LLM Routing Worth It? Task-Stratified, Quality-Constrained Evaluation under Limited Feedback* 中，用冻结的 LLMRouterBench 测试集评估了轻量非生成式 Router：共 2,402 条测试请求、11 个当代模型和 9 个任务完成数据集。实验只用 validation 选择工作点，并在 5 个随机种子上分别报告任务族与数据集结果。
 
 | 工作负载 | 方法 | 相对强固定模型的成本节省 | Acceptance 变化 | 结论 |
 |---|---|---:|---:|---|
