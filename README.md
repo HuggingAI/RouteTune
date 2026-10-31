@@ -211,18 +211,29 @@ RouteTune 的核心特色只有一个：
 
 ## 文档
 
-- [一页产品定义](docs/PRODUCT_ONE_PAGER.md)
-- [核心技术与产品架构](docs/ARCHITECTURE.md)
-- [部署指南](docs/DEPLOYMENT.md)
-- [稳定演示与发布验收](docs/DEMO_RUNBOOK.md)
-- [Engine 数据契约](docs/ENGINE_CONTRACT.md)
-- [版本发布与扩缩容架构](docs/RELEASE_ARCHITECTURE.md)
-- [企业试跑数据集](docs/ENTERPRISE_PILOT_DATASETS.md)
-- [发布宣传素材](docs/LAUNCH_KIT.md)
-- [首次开源发布清单](docs/RELEASE_CHECKLIST.md)
+### 开始使用
+
+- [部署指南](docs/DEPLOYMENT.md)：Docker、本地源码、Key、备份与升级；
+- [本地演示与验收指南](docs/DEMO_RUNBOOK.md)：零 Key 走完运行、审阅、训练与发布；
+- [企业试跑数据集](docs/ENTERPRISE_PILOT_DATASETS.md)：公开样例、JSONL 格式与推荐试跑流程。
+
+### 产品与技术
+
+- [一页产品定义](docs/PRODUCT_ONE_PAGER.md)：RouteTune 解决什么问题，以及明确不做什么；
+- [核心技术与产品架构](docs/ARCHITECTURE.md)：Engine、控制面、Runtime、安全与 Trace；
+- [Engine 数据契约](docs/ENGINE_CONTRACT.md)：可独立演进的 Bundle 与 Decision 契约；
+- [生产架构与扩缩容路线](docs/RELEASE_ARCHITECTURE.md)：已实现的发布语义与后续多副本方向；
+- [公开基准执行协议](docs/PUBLIC_BENCHMARK.md)：数据、候选模型、判分和断点续跑约束。
+
+### 社区与治理
+
+- [路线图](ROADMAP.md)：近期交付、生产化方向和明确边界；
+- [项目治理](GOVERNANCE.md)：角色、决策、版本和安全响应机制；
+- [贡献指南](CONTRIBUTING.md) 与 [行为准则](CODE_OF_CONDUCT.md)；
+- [安全策略](SECURITY.md) 与 [依赖许可证说明](docs/DEPENDENCY_LICENSES.md)。
 
 ## 参与项目
 
-欢迎提交 Bug、真实业务路由场景和小而明确的改进。开始前请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)；安全问题请按 [SECURITY.md](SECURITY.md) 私下报告。
+欢迎提交 Bug、真实业务路由场景和小而明确的改进。开始前请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)；项目决策遵循 [GOVERNANCE.md](GOVERNANCE.md)，安全问题请按 [SECURITY.md](SECURITY.md) 私下报告。
 
 Apache License 2.0，详见 [LICENSE](LICENSE)。

@@ -1,0 +1,55 @@
+name: Bug report
+description: 报告可复现的 RouteTune 行为问题
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请先删除 API Key、客户输入、内部域名和未脱敏 Trace。安全漏洞请使用仓库的 Private vulnerability reporting，不要创建公开 Issue。
+  - type: input
+    id: version
+    attributes:
+      label: RouteTune 版本
+      description: Git tag、commit SHA 或容器版本。
+      placeholder: v0.1.0 / commit SHA
+    validations:
+      required: true
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: 部署方式
+      options:
+        - Docker Compose
+        - 从源码运行
+        - 其他
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 最小复现步骤
+      description: 请提供能够稳定复现问题的最小步骤和已经脱敏的输入。
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为与脱敏日志
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交确认
+      options:
+        - label: 我已搜索现有 Issue，没有发现相同问题。
+          required: true
+        - label: 内容不包含密钥、客户数据或其他敏感信息。
+          required: true

@@ -1,4 +1,6 @@
-# 首次开源发布清单
+# 维护者发布清单
+
+> 本文件是维护者作业记录，不是最终用户使用文档。首次开源准备已经完成；后续版本应从当前主分支重新执行适用的验收项。
 
 ## 已完成
 
@@ -13,17 +15,16 @@
 - [x] wheel/sdist 构建与静态资源打包检查
 - [x] 密钥、本机路径和本地配置提交检查
 
-## 发布前人工确认
+## 每次发布前人工确认
 
-- [ ] 将本地仓库连接到 `git@github.com:HuggingAI/RouteTune.git`
-- [ ] 检查初始 commit 中没有 `.env`、本地 TOML、数据库和 artifacts
+- [ ] 检查提交中没有 `.env`、本地 TOML、数据库、客户数据和训练 artifacts
 - [ ] 在正常 Docker Hub 网络下完成一次 `docker compose up --build`
 - [ ] 用公开样例数据截取运行大盘、人工标注、Router 版本三张图
-- [ ] 在 GitHub 设置 Description、Topics 和 Social preview
-- [ ] 启用 GitHub Discussions 与 Private vulnerability reporting
-- [ ] 推送 `main`，确认 CI 全绿
-- [ ] 创建 `v0.1.0` tag 和 GitHub Release
-- [ ] 发布首发帖，并把真实反馈收敛到 Issues/Discussions
+- [ ] 确认 GitHub Description、Topics、Social preview 和文档链接仍然准确
+- [ ] 确认 GitHub Discussions 与 Private vulnerability reporting 可用
+- [ ] 推送 `main`，确认 CI 全绿并完成依赖许可证审阅
+- [ ] 创建对应版本的 tag 和 GitHub Release，附迁移与回滚说明
+- [ ] 发布版本说明，并把真实反馈收敛到 Issues/Discussions
 
 ## `v0.1.0` Release 标题
 

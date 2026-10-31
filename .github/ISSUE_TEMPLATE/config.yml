@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/HuggingAI/RouteTune/security/advisories/new
+    about: 请通过私密渠道报告漏洞、密钥泄露或敏感数据风险。
+  - name: Project discussions
+    url: https://github.com/HuggingAI/RouteTune/discussions
+    about: 使用问题、路线图讨论和较大的产品方向请优先在 Discussions 中交流。
